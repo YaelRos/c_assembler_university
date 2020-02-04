@@ -1,0 +1,6 @@
+#define FIRST_INDEX 0
+#define LABEL_MAX_LEN 31
+#define FIRST_ADDRES 100
+#define MAX_WORD_LENGTH 15
+#define MAX_LINE_LENGTH 80
+
