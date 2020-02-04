@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 {
 
 	if (argc == 1)
-		#TO DO: print error - missing file;
+		//TO DO: print error - missing file;
 		return 1;
 
 	for (int i = 0; i < count; ++i)
