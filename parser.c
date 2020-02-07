@@ -44,23 +44,35 @@ void updateValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode)
 	}
 }
 
-parseLineSec(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
+void parseSecLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
 {
-	if(line->symbType == DATA | line->symbType == EXTERN)
+	if(line->symbType == DATA_TYPE | line->symbType == EXTERN_TYPE)
 	{
 		return;
 	}
-	else if (line->symbType == ENTRY)
+	else if (line->symbType == ENTRY_TYPE)
 	{
-		//do line 6
+		SymbNode *symbNode;
+		if(getSymbFeature(symbTable, line->typeHandle->et.labelName, symbNode) == NULL)
+		{
+			printError(LABEL_NOT_IN_SYMB_TABLE);
+			line->error = LABEL_NOT_IN_SYMB_TABLE;
+		}
+		else
+		{
+			symbNode->symbType = ENTRY_TYPE;
+		}
 		return;
 	}
-	//do line 7
+	else 
+	{
+		updateBinaryMachineCode(line, instructImg, symbTable);
+	}
 	instructImg->ic = instructImg->ic + L;
 	return;
 }
 
-parseLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
+void parseLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
 {
 	void (parseDType[2])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
 
@@ -73,19 +85,22 @@ parseLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, Symb
 	{
 		line->symbFlag = 0;
 	}
-	if(isItDataInsturction(line))
+	if(isData(line))
 	{
-		if (line->lineType == EXTERN)
+		if (line->lineType == EXTERN_TYPE)
 		{
-			return handleExternCase(line, dataImg, symbNode);
+			return handleExternCase(line, dataImg, instructImg, symbNode, symbTable);
 		}
-		else if (line->symbFlag)
+		else if (line->lineType == DATA_TYPE)
 		{
-			SymbNode *symbNode
-			createSymbNode(line, dataImg, symbNode, DATA);
-			updateValuesInSymbTable(symbTable, symbNode);
+			if (line->symbFlag)
+			{
+				SymbNode *symbNode
+				initSymbNode(line->symbValue, dataImg, instructImg, symbNode, DATA_TYPE);
+				updateValuesInSymbTable(symbTable, symbNode);
+			}
+			parseDType[line->dataType](line, dataImg);
 		}
-		parseDType[line->dataType](line, dataImg);
 		return;
 	}
 	else 
@@ -93,13 +108,13 @@ parseLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, Symb
 		if (line->symbFlag)
 		{
 			SymbNode *symbNode
-			createSymbNode(line,dataImg, instructImg, symbNode, CODE)
+			initSymbNode(line->symbValue, dataImg, instructImg, symbNode, CODE_TYPE);
 			updateValuesInSymbTable(symbTable, symbNode);
 		}
 		getInstrucName(line);
 		getOperandsStruct(line);
 		calculateL(line);
-		buildBinaryCode(line);
+		buildBinaryCodeFirstLn(line);
 		instructImg->ic = instructImg->ic + L
 	}	
 }
@@ -133,16 +148,63 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 	}
 }
 
-int isItDataInsturction(ParsedLineNode * line)
+void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg, 
+	SymbTable *symbTable)
+{
+	int i;
+	instructImg->ic++;
+	if (line->typeHandle->instruct->opSrcMethod == DIRECT)
+	{
+		addDirectLabelToMem(line, instructImg, symbTable);
+	}
+	else if (line->typeHandle->instruct->opDstMethod == DIRECT)
+	{
+		addDirectLabelToMem(line, instructImg, symbTable);
+	}
+	else 
+	{
+		instructImg->ic = instructImg->ic+line->typeHandle->instruct->addLine;
+	}
+}
+
+void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg, 
+	SymbTable *symbTable)
+{
+	SymbNode *symbNode;
+	
+	if(getSymbFeature(symbTable, line->symbValue, symbNode) == NULL)
+	{
+		printError(LABEL_NOT_IN_SYMB_TABLE);
+		line->error = LABEL_NOT_IN_SYMB_TABLE;
+	}
+	else
+	{
+		InstructionNode *in;
+		char *dst; 
+		convertNumToBinaryStr(symbNode->symbAddr ,dst, false, IMM_VAL_LEN_BITS)
+		memcpy(in->instruction, dst, IMM_VAL_LEN_BITS);
+		instructImg->instructions[instructImg->ic++]=in; 
+	}
+	if (symbNode->symbType == EXTERN_TYPE)
+	{
+		memcpy(in->instruction+IMM_VAL_LEN_BITS, E, ARE_LEN_BITS);
+	}
+	else
+	{
+		memcpy(in->instruction+IMM_VAL_LEN_BITS, R, ARE_LEN_BITS);
+	}
+}
+
+int isData(ParsedLineNode * line)
 {
 	trimwhitespace(line->line);
 	if (line->line[FIRST_INDEX] == '.')
 	{
 		line->line++;
-		if(isDataStorageInsturction(line))
+		if(isDataStorage(line))
 		else
 		{
-			setStorageEntryOrExtern() 
+			setStorageEntryOrExtern(line);
 		}
 		return 1;
 	}
@@ -153,39 +215,41 @@ int isItDataInsturction(ParsedLineNode * line)
 	}
 }	
 
-int isDataStorageInsturction(ParsedLineNode * line) 
+int isDataStorage(ParsedLineNode * line) 
 {
 	if (strncmp(line->line, DATA, 4) == 0)
 	{
-		line->lineType = DATA;
+		line->lineType = DATA_TYPE;
 		line->dataType = DOT_DATA_TYPE;
 		return 1;
 	}
 	else if (strncmp(line->line, STRING, 6) == 0)
 	{
-		line->lineType = DATA;
+		line->lineType = DATA_TYPE;
 		line->dataType = DOT_STRING_TYPE;
 		return 1;
 	}
 	return 0;
 }
 
-void setStorageEntryOrExtern() 
+void setStorageEntryOrExtern(ParsedLineNode * line) 
 {	
-	if(strncmp(line->line, "entry", 5) == 0)
+	if(strncmp(line->line, ENTRY, ENTRY_LEN) == 0)
 	{
-		line->lineType = ENTRY;
+		line->lineType = ENTRY_TYPE;
+		setSymbFromExternEntry(symbNode, line->line, ENTRY_LEN)
 	}
-	else if(strncmp(line->line, "extern", EXTERN_LEN) == 0)
+	else if(strncmp(line->line, EXTERN, EXTERN_LEN) == 0)
 	{
-		line->lineType = EXTERN;
+		line->lineType = EXTERN_TYPE;
+		setSymbFromExternEntry(symbNode, line->line, EXTERN_LEN)
 	}
 }
 
 void getInstrucName(ParsedLineNode* line)
 {
 	int i = 0;
-	char instruc[MAX_LENTH_OF_INSTRUCT];
+	char instruc[MAX_LENTH_OF_INSTRUCT+1];
 	trimwhitespace(line->line);
 	while(!isspace(line->line[i]))
 	{
@@ -293,10 +357,10 @@ AddressingMethod getAddressindMethod(char* operand, SymbTable *symbTable)
 	}
 }
 
-getOperandsStruct(ParsedLineNode* line, SymbTable *symbTable) 
+void getOperandsStruct(ParsedLineNode* line, SymbTable *symbTable) 
 {
-	line->typeHandle.opSrcMethod = NULL;
-	line->typeHandle.opDstMethod = NULL;
+	line->typeHandle.opSrcMethod = NO_ADD_METHOD;
+	line->typeHandle.opDstMethod = NO_ADD_METHOD;
 
 	switch(opCodesMatch[line->typeHandle.opCode].instrucGroup)
 	{
@@ -311,29 +375,135 @@ getOperandsStruct(ParsedLineNode* line, SymbTable *symbTable)
 	}
 }
 
-calculateL(line)
+void calculateL(ParsedLineNode line)
 {
-	//do line 13
+	switch(opCodesMatch[line->typeHandle.instruct.opCode].instrucGroup)
+	{
+		case TWO_OPERANDS: 
+			if(line->typeHandle.instruct.opSrcMethod == INDIRECT_REG |
+			 line->typeHandle.instruct.opSrcMethod == DIRECT_REG)
+			{
+				if (line->typeHandle.instruct.opDstMethod == INDIRECT_REG |
+				 line->typeHandle.instruct.opDstMethod == DIRECT_REG)
+				{
+					line->typeHandle.instruct.addLine = ONE_ADDITIONAL_LINE;
+				}
+				else
+				{
+					line->typeHandle.instruct.addLine = TWO_ADDITIONAL_LINE;
+				}
+			}
+			else
+			{
+				line->typeHandle.instruct.addLine = TWO_ADDITIONAL_LINE;
+			}
+
+			break;
+		case ONE_OPERAND: 
+			line->typeHandle->instruct.addLine = ONE_ADDITIONAL_LINE;
+			break;
+		case NO_OPERANDS:
+			line->typeHandle->instruct.addLine = NO_ADDITIONAL_LINE;
+			break;
+	}
 }
 
-buildBinaryCode(line)
+void buildBinaryCodeFirstLn(ParsedLineNode *line)
 {
-	//do line 14
+	int place;
+	char * binary;
+	InstructionNode *in;
+	convertNumToBinaryStr(line->typeHandle.instruct.opCode ,binary, false, OPCODE_LEN_BITS);
+	memcpy(in->instruction, binary, OPCODE_LEN_BITS); // add opcode
+	place = addregMethodToFirstLn(line->typeHandle.instruct.opSrcMethod, in, OPCODE_LEN_BITS); // add src reg method
+	place = addregMethodToFirstLn(line->typeHandle.instruct.opDstMethod, in, place); // add dst reg method
+	mamcpy(in->instruction+place, A, ARE_LEN_BITS); // add ARE bits
+	instructImg->instructions[instructImg->ic++]=in; //addBinaryCodeToInstructImg
+	buildBinaryCodeNextLn();
+}
+
+void buildBinaryCodeNextLn(ParsedLineNode *line)
+{
+	int place;
+	InstructionNode *in1;
+	InstructionNode *in2;
+	memcpy(in1->instruction, EMPTY_BMC, MAX_WORD_LENGTH); // create an empty word in binary format and save it as an instruction.
+
+	switch(line->typeHandle.instruct.addLine)
+	{
+		case ONE_ADDITIONAL_LINE: 
+			addRegMethodToLn(line->typeHandle.instruct.opDstMethod, REG_PRIOR_BITS+REG_VAL_BITS, in1, line);
+			if (src != NO_ADD_METHOD)
+			{
+				addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, place, in1, line);
+			}
+			instructImg->instructions[instructImg->ic++]=in1; //add Binary Code To InstructImg
+			break;
+ 		case TWO_ADDITIONAL_LINE:
+ 			memcpy(in2->instruction, EMPTY_BMC, MAX_WORD_LENGTH); // create an empty word in binary format and save it as an instruction.
+ 			addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, place, in1, line);
+ 			instructImg->instructions[instructImg->ic++]=in1; //addBinaryCodeToInstructImg
+ 			addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, REG_PRIOR_BITS+REG_VAL_BITS, in2, line);
+ 			instructImg->instructions[instructImg->ic++]=in2; //addBinaryCodeToInstructImg
+			break;
+		case NO_ADDITIONAL_LINE: break;
+	}
+}
+
+
+int addRegMethodToLn(int opMethod, int place, InstructionNode *in, ParsedLineNode *line)
+{
+	char *p = line->typeHandle.instruct.opDst + 1; //less '#' or 'r' or '*'
+	if (opMethod == INDIRECT_REG)
+	{
+		p = p + 1;//less 'r'
+	}
+	switch (opMethod)
+	{
+		case IMMEDIATE: 
+			addRegToMem(p, isNegative(p), IMM_VAL_LEN_BITS, 0, in);break;
+		case INDIRECT_REG: DIRECT_REG:
+			addRegToMem(p, false, REG_VAL_BITS, place, in); break;
+		case defalut: break;
+	}
+}
+
+void addRegToMem(char *p, bool isNegative, int len, int place, InstructionNode *in)
+{
+	char *dst; 
+	convertDecToBinaryStr(p ,dst, isNegative, len)
+	memcpy(in->instruction+place, dst, len);
+	memcpy(in->instruction+place+len, A, ARE_LEN_BITS);
+}
+
+
+
+int addRegMethodToFirstLn(int opMet, InstructionNode *in, int place)
+{
+	switch (opMet)
+	{
+		case IMMEDIATE: memcpy(in->instruction+place,"0001", REG_METHOD_LEN_BITS); break;
+		case DIRECT:	memcpy(in->instruction+place, "0010", REG_METHOD_LEN_BITS); break;
+		case INDIRECT_REG:	memcpy(in->instruction+place, "0100", REG_METHOD_LEN_BITS); break;
+		case DIRECT_REG:	memcpy(in->instruction+place, "1000", REG_METHOD_LEN_BITS); break;
+		case defalut:	memcpy(in->instruction+place, "0000", REG_METHOD_LEN_BITS); break;
+	}
+	return place+REG_METHOD_LEN_BITS;
 }
 
 void getSymbValue(ParsedLineNode* line, char* label)
 {
 	int lenLabel;
 	lenLabel = strlen(line->line)- strlen(label)
-	strncpy(line->symbValue,line, lenLabel)
-	line = line + lenLabel;
+	strncpy(line->symbValue,line->line, lenLabel)
+	line->line = line->line + lenLabel;
 }
 
-void getSymbFromExtern(symbNode, char* line)
+void setSymbFromExternEntry(ParsedLineNode* line, int etLen)
 {
-	line = line + EXTERN_LEN
-	trimwhitespace(line);
-	strcpy(symbNode->symbName, line);
+	line->line = line->line + etLen
+	trimwhitespace(line->line);
+	memcpy(line->typeHandle->et.labelName, line->line);
 }
 
 void parseDataType(ParsedLineNode* line, DataImg *dataImg)
@@ -347,12 +517,8 @@ void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 	while (dec != NULL)
 	{
 		trimwhitespace(dec);
-		if (dec[0] == '-')
-		{
-			negative = 1;
-			dec++;
-		}
-		else if (dec[0] == '+') 
+
+		if ((negative = isNegative(dec)) | isPositive(dec))
 		{
 			dec++;
 		}

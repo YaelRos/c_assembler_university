@@ -1,9 +1,7 @@
-#define DATA "data"
-#define STRING "string"
 
 typedef struct dataNode {
 	struct dataNode *next;
-	int binaryData[MAX_WORD_LENGTH];
+	char binaryData[MAX_WORD_LENGTH+1];
 } DataImgNode;
 
 typedef struct dataImg {
@@ -14,21 +12,18 @@ typedef struct dataImg {
 
 
 typedef struct instructImg {
-	InstructImgNode *head;
+	InstructionNode *instructions[MEM_SIZE];
 	int ic;
 } InstructImg;
 
 typedef struct instructNode {
-	
-	INSTRUCTIONS instruct;
-	struct instructNode *next;
-
-} InstructImgNode;
+	char instruction[MAX_WORD_LENGTH+1];
+} InstructionNode ;
 
 typedef struct symbNode {
 	char* symbName;
 	int symbAddr;
-	SymbType symbType;
+	LineTypes symbType;
 	struct symbNode *next;
 } SymbNode;
 
@@ -46,16 +41,35 @@ typedef struct parsedLine {
 	int symbFlag;
 	char* symbValue;
 	LineTypes lineType;
-	DotDataTypes dataType;
-	int instructName;
+	union {
+		DotDataTypes dataType;
+		InstructionStruct instruct;
+		struct EterenEntryType et;
+	} typeHandle;
 	struct parseLine *next
 } ParsedLineNode;
 
-typedef struct parsedFile {
+struct EterenEntryType
+{
+	char labelName[LABEL_MAX_LEN];
+} ;
+
+typedef struct parsedFile 
+{
 	ParsedLineNode *head;
 	ParsedLineNode *tail;
 	int count;
 } ParsedFile; 
+
+typedef struct instructionStruct
+{
+	Instruction opCode;
+	char opSrc[LABEL_MAX_LEN];
+	AddressingMethod opSrcMethod;
+	char opDst[LABEL_MAX_LEN];
+	AddressingMethod opDestMethod;
+	int addLine;
+} InstructionStruct;
 
 typedef enum LINES_TYPE 
 {
@@ -65,13 +79,37 @@ typedef enum LINES_TYPE
 	EXTERNAL_TYPE,
 } LineTypes;
 
+typedef enum ADDRESSING_METHOD 
+{
+	IMMEDIATE,
+	DIRECT,
+	INDIRECT_REG,
+	DIRECT_REG,
+	NO_ADD_METHOD
+} AddressingMethod;
+
+
 typedef enum DOT_DATA_TYPE 
 {
 	DOT_DATA_TYPE,
 	DOT_STRING_TYPE
 } DotDataTypes;
 
-enum INSTRUCTIONS 
+typedef struct opCode
+{
+	char* opCodeName;
+	Instruction opCodeNum;
+	InstructionGroup instrucGroup;
+} OpCode;
+
+typedef enum INSTRUCTION_GROUPS 
+{
+	TWO_OPERANDS = 1,
+	ONE_OPERAND,
+	NO_OPERANDS
+} InstructionGroup
+
+typedef enum INSTRUCTIONS 
 {
 	MOV,
 	CMP,
@@ -89,4 +127,4 @@ enum INSTRUCTIONS
 	JSR,
 	RTS,
 	STOP
-};
+} Instruction;

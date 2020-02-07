@@ -49,19 +49,16 @@ char *trimwhitespace(char *str)
   return str;
 }
 
-void handleExternCase(ParsedLineNode* line,DataImg* dataImg,SymbNode* symbNodeN)
+void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instructImg, SymbNode* symbNode, SymbTable* symbTable)
 {
 	SymbNode *symbNode
 	if (line->symbFlag)
 	{
 		printWarning(LABEL_BEFORE_EXTERN);
 	}
-	getSymbFromExtern(symbNode, line->line);
-	createSymbNode(line, dataImg, symbNode, EXTERN);
-	return;
+	initSymbNode(line->typeHandle->et.labelName, dataImg, instructImg, symbNode, EXTERN);
+	updateValuesInSymbTable(symbTable, symbNode);
 }
-
-
 
 void parsedLineNodeCpy(ParsedLineNode *dst, ParsedLineNode *src)
 {
@@ -76,7 +73,7 @@ void parsedLineNodeCpy(ParsedLineNode *dst, ParsedLineNode *src)
 	dst->parseLine *next = NULL;
 }
 
-isSymbExist(SymbTable *symbTable, char* symbValue)
+int isSymbExist(SymbTable *symbTable, char* symbValue)
 {
 	int i;
 	SymbNode *symbNode;
@@ -99,7 +96,6 @@ void printWarning(char * str)
 
 }
 
-
 void convertDecStrToBinaryStr(char* decSrc,char* binaryDst, bool negative, int len)
 {
     int mask, num;
@@ -110,14 +106,20 @@ void convertDecStrToBinaryStr(char* decSrc,char* binaryDst, bool negative, int l
 	        num += 1;
 	        num *= -1;
 	    }
-	    mask = 1 << (len-1);
-	    while (mask) {
-	        *binaryDst = getBinaryChar(mask, num, negative);
-	        binaryDst++;
-	        mask >>= 1;
-	    }
-	    *(binaryDst) = '\0';
+	    convertNumToBinaryStr(num, binaryDst, negative, len)
 	}
+}
+
+void convertNumToBinaryStr(int num ,char* binary, bool negative, int len)
+{
+	int mask, num;
+    mask = 1 << (len-1);
+    while (mask) {
+        *binaryDst = getBinaryChar(mask, num, negative);
+        binaryDst++;
+        mask >>= 1;
+    }
+    *(binaryDst) = '\0';
 }
 
 char getBinaryChar(int mask, int value, bool isNegative) {

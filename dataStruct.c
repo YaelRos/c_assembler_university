@@ -1,23 +1,15 @@
-void initSymbNode(ParsedLineNode* line, DataImg *dataImg, 
+void initSymbNode(char* name, DataImg *dataImg, 
 	InstructImg *instructImg,SymbNode symbNode, int feature)
 {	
-	symbNode->symbName = line->symbValue;
-	if (feature == DATA) 
-	{
-		symbNode->symbType = DATA;
-		symbNode->symbAddr = dataImg->dc;
-	}
-	else if (feature == CODE) 
-	{
-		symbNode->symbType = CODE;
-		symbNode->symbAddr = instructImg->ic + START_ADDR;
-	}
-	else if (feature == EXTERN)
-	{
-		symbNode->symbType = EXTERN;
-	}
+	symbNode->symbName = name;
+	symbNode->symbType = feature;
 
-	return symbName;
+	switch (feature)
+	{
+		case DATA_TYPE: symbNode->symbAddr = dataImg->dc; break;
+		case CODE_TYPE: symbNode->symbAddr = instructImg->ic + START_ADDR;  break;
+		case defulat: break;
+	}
 }
 
 
@@ -59,5 +51,21 @@ void addLineToParsedFile(ParsedLineNode *line, ParsedFile *parsedFile, int count
 	{
 		parsedFile->tail.next = tmp;
 	}
+}
+
+
+SymbNode* getSymbFeature(SymbTable *symbTable, char* labelName, SymbNode *tmp)
+{
+	tmp = (SymbNode*) malloc(sizeof(SymbNode));
+	tmp = symbTable->head;
+
+	while(tmp != NULL)
+	{
+		if (strcmp(tmp.symbName,labelName) == 0)
+		{
+			return tmp;
+		}
+	}
+	return NULL;
 }
 

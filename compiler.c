@@ -35,7 +35,7 @@ int firstIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTa
 			}
 			strcpy(line->fileName,fileName);
 			line->lineNum = ++lineNum;
-			parseLine(line, instructImg, dataImg, symbTable);
+			parseFirstLine(line, instructImg, dataImg, symbTable);
 			addLineToParsedFile(line, parsedFile, lineNum);
 		}
 	}
@@ -57,24 +57,16 @@ int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTabl
 	int lineNum = 0;
 	instructImg->ic = 0;
 
-	if ((fp = fopen(fileName, 'r')) == NULL)
-	{
-		printError(ERROR_FETCH_FILE, fileName)
-		return ERROR_FETCH_FILE;
-	}
 	if  (((line = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL)
 		| ((tmp = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL))
 	{
 		exit(0);
 		//TO do somthing when no more storage;
 	}
-	else 
-	{
-		parsedLineNodeCpy(line, parsedFile->head);
-	}
+	
 	while (line != NULL) 
 	{
-		parseLineSec(line, instructImg, dataImg, symbTable);
+		parseSecLine(line, instructImg, dataImg, symbTable);
 		if (line->storageData)
 		{
 			//do line 7
