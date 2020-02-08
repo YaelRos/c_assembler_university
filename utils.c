@@ -2,18 +2,166 @@
 #include "util.h"
 #include "dataStruct.h"
 
-int createOutputFiles()
+int createOutputFiles(instructImg *instructImg, char *inFileName, int dc)
 {
-	
+	int i, keywordInOct;
+	char *memAdd;
+    char outputFileName[MAX_LINE_LENGTH];
+    FILE *fp;
+	memAdd = (char*)malloc(sizeof(char)) 
+    appendExtensionToFilename(inFileName, outFileName, OBJ_EXTENSION);
+	fp = fopen(outFileName, "w");
+    fprintf(fp, "%d %d\n", instructImg->ic - dc, dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
+
+    /* Write every row in Octal */
+    for (i = 0; i < instructImg->ic; i++) {
+        keywordInOct = binaryToOctal(instructImg->instructions[i]);
+        numToMemAdd(memAdd, FIRST_ADDRES+i, DES_MEM_ADD_SIZE+1);
+        fprintf(fp, "%d %d\n", memAdd ,keywordInOct);
+    }    
+
+    fclose(fp);
+    return 1;
 }
+
+void createOutputFiles(instructImg *instructImg, char *inFileName, int dc)
+{
+	int i, keywordInOct;
+	char *memAdd;
+    char outputFileName[MAX_LINE_LENGTH];
+    FILE *fp;
+	memAdd = (char*)malloc(sizeof(char)) 
+    appendExtensionToFilename(outFileName, inFileName, OBJ_EXTENSION);
+	fp = fopen(outFileName, "w");
+    fprintf(fp, "%d %d\n", instructImg->ic - dc, dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
+
+    /* Write every row in Octal */
+    for (i = 0; i < instructImg->ic; i++) {
+        keywordInOct = binaryToOctal(instructImg->instructions[i]);
+        numToMemAdd(memAdd, FIRST_ADDRES+i, DES_MEM_ADD_SIZE+1);
+        fprintf(fp, "%d %d\n", memAdd ,keywordInOct);
+    }    
+
+    fclose(fp);
+    createEntryExternFiles(symbTable, inFileName);
+}
+
+void createEntryExternFiles(SymbolTable *symbTable, char *inFileName) {
+    char enOutFileName[MAX_LINE_LENGTH];
+    char exOutFileName[MAX_LINE_LENGTH];
+    FILE *fpEx, *fpEn;
+    int hasEnData = 0, hasExData = 0, i;
+    SymbNode *symbNode = symbTable->head;
+
+    appendExtensionToFilename(enOutFileName, inFileName, EN_EXTENSION);
+    appendExtensionToFilename(exOutFileName, inFileName, EX_EXTENSION);
+
+    for (i = 0; i < symbTable->counter; symbNode = symbNode->next, i++)  
+    {   
+        if (symbNode->symbType == ENTRY_TYPE) 
+        {
+            if (!hasEnData) 
+            {
+                fpEn = fopen(enOutFileName, "w");
+                hasEnData = 1;
+            }
+
+            fprintf(fpEn, "%s %d\n", symbNode->symbName, symbNode->symbAddr);
+        }
+    }
+    for (i = 0; i < symbTable->exTable->counter; i++)
+    {
+        if (!hasExData) 
+        {
+            fpEx = fopen(exOutFileName, "w");
+            hasExData = 1;
+        }
+        fprintf(fpEx, "%s %s\n", symbTable->exTable->externalLabel[i].SymbName,
+         numToMemAdd(symbTable->exTable->externalLabel[i].memAddr));
+    }
+
+    /* Close files */
+    if (hasEnData) 
+    {
+        fclose(fpEn);
+    }
+
+    if (hasExData) 
+    {
+        fclose(fpEx);
+    }
+}
+
+
 
 void freeMem()
 {
 	
 }
 
+int binaryToOctal(char* binaryNumStr)
+{
+    int octalnum = 0, decimalnum = 0, i = 0, num;
 
-int isEmptyLine ()
+	binarynum = atoi(binaryNumStr);
+
+    /* This while loop converts binary number "binarynum" to the
+     * decimal number "decimalnum"
+     */
+    while(binarynum != 0)
+    {
+        decimalnum = decimalnum + (binarynum%10) * pow(2,i);
+        i++;
+        binarynum = binarynum / 10;
+    }
+
+    //i is re-initialized
+    i = 1;
+
+    /* This loop converts the decimal number "decimalnum" to the octal
+     * number "octalnum"
+     */
+    while (decimalnum != 0)
+    {
+        octalnum = octalnum + (decimalnum % 8) * i;
+        decimalnum = decimalnum / 8;
+        i = i * 10;
+    }
+
+    //Returning the octal number that we got from binary number
+    return octalnum;
+}
+
+void numToMemAdd(char* dstNum, int srcNum, int len)
+{
+	int i = 0;
+	if (srcNum<=MAX_NUM_WITH_3_DIGIT)
+	{
+		*dstNum = '0';
+		i++;
+		dstNum++;
+	}
+	itoa(dstNum, srcNum,len-i-1);
+	*(dstNum+len) = '\0';
+}
+
+
+void appendExtensionToFilename(char* dst, char* src, char* extension)
+{
+
+}
+
+int isEmptyLine (char* line)
+{
+	while (*inputRow != '\0') {
+		if (!isspace(*inputRow)) {
+			return 0;
+		}
+		inputRow++;
+	}
+	return 1;
+}
+
 int isCommentLine()
 
 void rmvSpace(char* str) 
@@ -95,6 +243,7 @@ void printWarning(char * str)
 {
 
 }
+
 
 void convertDecStrToBinaryStr(char* decSrc,char* binaryDst, bool negative, int len)
 {

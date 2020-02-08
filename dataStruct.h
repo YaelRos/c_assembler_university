@@ -16,6 +16,17 @@ typedef struct instructImg {
 	int ic;
 } InstructImg;
 
+struct externNode {
+	char SymbName[LABEL_MAX_LEN];
+	int memAddr;
+};
+
+typedef struct externTable {
+	struct externNode *externalLabel;
+	int counter;
+} ExternTable;
+
+
 typedef struct instructNode {
 	char instruction[MAX_WORD_LENGTH+1];
 } InstructionNode ;
@@ -30,13 +41,14 @@ typedef struct symbNode {
 typedef struct symbTable {
 	SymbNode *head;
 	SymbNode *tail;
+	ExternNode exTable;
 	int counter;
 } SymbTable;
 
 typedef struct parsedLine {
 	char* fileName;
 	int lineNum;
-	char* line;
+	char* ln;
 	int error;
 	int symbFlag;
 	char* symbValue;

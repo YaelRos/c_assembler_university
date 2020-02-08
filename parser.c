@@ -22,27 +22,6 @@ static OpCode opCodesMatch[NUM_OF_INSTRUCTION] = {
     {"stop", STOP, NO_OPERANDS}
 }
 
-void updateValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode)
-{
-	if (symbTable->head == NULL)
-	{
-		symbTable->counter = START;
-		symbTable->head = symbNode;
-		symbTable->tail = symbNode;
-	}
-	else 
-	{
-		if(isSymbExist(symbTable, symbNode->symbValue))
-		{
-			symbTable->tail.next = symbNode;
-			symbTable->counter++;
-		}
-		else
-		{
-			printError(SYMBOL_ALREADY_EXIST_ERROR);
-		}
-	}
-}
 
 void parseSecLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
 {
@@ -72,7 +51,7 @@ void parseSecLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataI
 	return;
 }
 
-void parseLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
+void parseFirstLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
 {
 	void (parseDType[2])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
 
@@ -148,24 +127,6 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 	}
 }
 
-void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg, 
-	SymbTable *symbTable)
-{
-	int i;
-	instructImg->ic++;
-	if (line->typeHandle->instruct->opSrcMethod == DIRECT)
-	{
-		addDirectLabelToMem(line, instructImg, symbTable);
-	}
-	else if (line->typeHandle->instruct->opDstMethod == DIRECT)
-	{
-		addDirectLabelToMem(line, instructImg, symbTable);
-	}
-	else 
-	{
-		instructImg->ic = instructImg->ic+line->typeHandle->instruct->addLine;
-	}
-}
 
 void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg, 
 	SymbTable *symbTable)
@@ -319,6 +280,7 @@ bool isDirect(operand, SymbTable *symbTable)
 	SymbNode *tmp;
 	tmp = (SymbNodes*)malloc(sizeof(SymbNodes))
 	tmp = symbTable->head;
+	struct externNode exNode; 
 	for (int i = 0; i < symbTable->counter; i++)
 	{
 		if(strcmp(operand, tmp->symbName))
@@ -327,6 +289,9 @@ bool isDirect(operand, SymbTable *symbTable)
 		}
 		else
 		{
+			exNode.memAddr = tmp->symbAddr;
+			strcpy(exNode.SymbName, operand);
+			symbTable->exTable[symbTable->exTable->counter++] = exNode;
 			return true;
 		}
 	}
@@ -355,140 +320,6 @@ AddressingMethod getAddressindMethod(char* operand, SymbTable *symbTable)
 	{
 		printError(NON_EXSIT_ADDRESSING_METHOD);
 	}
-}
-
-void getOperandsStruct(ParsedLineNode* line, SymbTable *symbTable) 
-{
-	line->typeHandle.opSrcMethod = NO_ADD_METHOD;
-	line->typeHandle.opDstMethod = NO_ADD_METHOD;
-
-	switch(opCodesMatch[line->typeHandle.opCode].instrucGroup)
-	{
-		case TWO_OPERANDS: 
-			getFirstOperand(line, symbTable);
-			break;
-		case ONE_OPERAND: 
-			getSecOperand(line);
-			break;
-		case NO_OPERANDS:
-			break;
-	}
-}
-
-void calculateL(ParsedLineNode line)
-{
-	switch(opCodesMatch[line->typeHandle.instruct.opCode].instrucGroup)
-	{
-		case TWO_OPERANDS: 
-			if(line->typeHandle.instruct.opSrcMethod == INDIRECT_REG |
-			 line->typeHandle.instruct.opSrcMethod == DIRECT_REG)
-			{
-				if (line->typeHandle.instruct.opDstMethod == INDIRECT_REG |
-				 line->typeHandle.instruct.opDstMethod == DIRECT_REG)
-				{
-					line->typeHandle.instruct.addLine = ONE_ADDITIONAL_LINE;
-				}
-				else
-				{
-					line->typeHandle.instruct.addLine = TWO_ADDITIONAL_LINE;
-				}
-			}
-			else
-			{
-				line->typeHandle.instruct.addLine = TWO_ADDITIONAL_LINE;
-			}
-
-			break;
-		case ONE_OPERAND: 
-			line->typeHandle->instruct.addLine = ONE_ADDITIONAL_LINE;
-			break;
-		case NO_OPERANDS:
-			line->typeHandle->instruct.addLine = NO_ADDITIONAL_LINE;
-			break;
-	}
-}
-
-void buildBinaryCodeFirstLn(ParsedLineNode *line)
-{
-	int place;
-	char * binary;
-	InstructionNode *in;
-	convertNumToBinaryStr(line->typeHandle.instruct.opCode ,binary, false, OPCODE_LEN_BITS);
-	memcpy(in->instruction, binary, OPCODE_LEN_BITS); // add opcode
-	place = addregMethodToFirstLn(line->typeHandle.instruct.opSrcMethod, in, OPCODE_LEN_BITS); // add src reg method
-	place = addregMethodToFirstLn(line->typeHandle.instruct.opDstMethod, in, place); // add dst reg method
-	mamcpy(in->instruction+place, A, ARE_LEN_BITS); // add ARE bits
-	instructImg->instructions[instructImg->ic++]=in; //addBinaryCodeToInstructImg
-	buildBinaryCodeNextLn();
-}
-
-void buildBinaryCodeNextLn(ParsedLineNode *line)
-{
-	int place;
-	InstructionNode *in1;
-	InstructionNode *in2;
-	memcpy(in1->instruction, EMPTY_BMC, MAX_WORD_LENGTH); // create an empty word in binary format and save it as an instruction.
-
-	switch(line->typeHandle.instruct.addLine)
-	{
-		case ONE_ADDITIONAL_LINE: 
-			addRegMethodToLn(line->typeHandle.instruct.opDstMethod, REG_PRIOR_BITS+REG_VAL_BITS, in1, line);
-			if (src != NO_ADD_METHOD)
-			{
-				addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, place, in1, line);
-			}
-			instructImg->instructions[instructImg->ic++]=in1; //add Binary Code To InstructImg
-			break;
- 		case TWO_ADDITIONAL_LINE:
- 			memcpy(in2->instruction, EMPTY_BMC, MAX_WORD_LENGTH); // create an empty word in binary format and save it as an instruction.
- 			addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, place, in1, line);
- 			instructImg->instructions[instructImg->ic++]=in1; //addBinaryCodeToInstructImg
- 			addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, REG_PRIOR_BITS+REG_VAL_BITS, in2, line);
- 			instructImg->instructions[instructImg->ic++]=in2; //addBinaryCodeToInstructImg
-			break;
-		case NO_ADDITIONAL_LINE: break;
-	}
-}
-
-
-int addRegMethodToLn(int opMethod, int place, InstructionNode *in, ParsedLineNode *line)
-{
-	char *p = line->typeHandle.instruct.opDst + 1; //less '#' or 'r' or '*'
-	if (opMethod == INDIRECT_REG)
-	{
-		p = p + 1;//less 'r'
-	}
-	switch (opMethod)
-	{
-		case IMMEDIATE: 
-			addRegToMem(p, isNegative(p), IMM_VAL_LEN_BITS, 0, in);break;
-		case INDIRECT_REG: DIRECT_REG:
-			addRegToMem(p, false, REG_VAL_BITS, place, in); break;
-		case defalut: break;
-	}
-}
-
-void addRegToMem(char *p, bool isNegative, int len, int place, InstructionNode *in)
-{
-	char *dst; 
-	convertDecToBinaryStr(p ,dst, isNegative, len)
-	memcpy(in->instruction+place, dst, len);
-	memcpy(in->instruction+place+len, A, ARE_LEN_BITS);
-}
-
-
-
-int addRegMethodToFirstLn(int opMet, InstructionNode *in, int place)
-{
-	switch (opMet)
-	{
-		case IMMEDIATE: memcpy(in->instruction+place,"0001", REG_METHOD_LEN_BITS); break;
-		case DIRECT:	memcpy(in->instruction+place, "0010", REG_METHOD_LEN_BITS); break;
-		case INDIRECT_REG:	memcpy(in->instruction+place, "0100", REG_METHOD_LEN_BITS); break;
-		case DIRECT_REG:	memcpy(in->instruction+place, "1000", REG_METHOD_LEN_BITS); break;
-		case defalut:	memcpy(in->instruction+place, "0000", REG_METHOD_LEN_BITS); break;
-	}
-	return place+REG_METHOD_LEN_BITS;
 }
 
 void getSymbValue(ParsedLineNode* line, char* label)
@@ -532,7 +363,7 @@ void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 {
 	int len;
 	char c;
-	char* ascii;
+	char* binary;
 
 	trimwhitespace(line->line);
 	len = strlen(line->line);
@@ -542,7 +373,7 @@ void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 		c = line->line[i];
 	 	if (isalpha(c))
 	 	{
-	 		convertCharToAscii(c, ascii)
+	 		convertNumToBinaryStr(c , binary, false, MAX_WORD_LENGTH)
 	 		addNumToDataImg(binary, dataImg);
 	 	}
 	}

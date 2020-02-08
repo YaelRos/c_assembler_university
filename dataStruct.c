@@ -8,12 +8,50 @@ void initSymbNode(char* name, DataImg *dataImg,
 	{
 		case DATA_TYPE: symbNode->symbAddr = dataImg->dc; break;
 		case CODE_TYPE: symbNode->symbAddr = instructImg->ic + START_ADDR;  break;
+		case EXTERN_TYPE: symbNode->symbAddr = 0; break;
+
 		case defulat: break;
 	}
 }
 
+void initDataImg(DataImg* dataImg)
+{
+	dataImg->head = NULL;
+	dataImg->tail = NULL;
+	dataImg->dc = 0;
+}
 
-void addNumToDataImg(char* binaryStr, DataImg dataImg)
+void initParsedFile(ParsedFile *pf)
+{
+	pf->head = NULL;
+	pf->tail = NULL;
+	pf->count = 0;
+
+}
+
+void initSymbTable(SymbTable *symbTable)
+{
+	ExternNode exTable;
+	initExTable(exTable);
+	symbTable->head = NULL;
+	symbTable->tail = NULL;
+	symbTable->counter = 0;
+}
+
+void initExTable(ExternNode *exTable)
+{
+	exTable->counter =0;
+}
+
+void initPardedLineNode(ParsedLineNode* line, char* ln, char* fileName, char lineNum)
+{
+	strcpy(line->ln,ln);
+	strcpy(line->fileName,fileName);
+	line->lineNum = lineNum;
+}
+				
+
+void addNumToDataImg(char* binaryStr, DataImg *dataImg)
 {
 	DataImgNode *tmp;
 	tmp = (DataImgNode*)malloc(sizeof(DataImgNode));
@@ -67,5 +105,27 @@ SymbNode* getSymbFeature(SymbTable *symbTable, char* labelName, SymbNode *tmp)
 		}
 	}
 	return NULL;
+}
+
+void updateValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode)
+{
+	if (symbTable->head == NULL)
+	{
+		symbTable->counter = START;
+		symbTable->head = symbNode;
+		symbTable->tail = symbNode;
+	}
+	else 
+	{
+		if(isSymbExist(symbTable, symbNode->symbValue))
+		{
+			symbTable->tail.next = symbNode;
+			symbTable->counter++;
+		}
+		else
+		{
+			printError(SYMBOL_ALREADY_EXIST_ERROR);
+		}
+	}
 }
 

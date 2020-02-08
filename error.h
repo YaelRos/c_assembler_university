@@ -4,8 +4,15 @@ enum ERRORS
 	NO_ERROR,
 	MISSING_FILE_PARAMETER,
 	ERROR_FETCH_FILE,
+	MEM_ELLOCATE_ERROR,
 	LABEL_EXCEEDED_MAX_LEN_ERROR,
 	DUP_LABEL_NAME_ERROR,
 	SYMBOL_ALREADY_EXIST_ERROR,
 	LABEL_NOT_IN_SYMB_TABLE
 };
+
+#define ERROR "ERROR: "
+
+#define MISSING_FILE_PARAMETER "missing file parameter"
+#define FETCH_FILE "can't fetch file - "
+#define OUT_OF_MEM "out of memory, can't allocate memory"

@@ -1,21 +1,29 @@
 #include <stdio.h>
-#include "parser.h"
-#include "assembler.h"
 #include "errors.h"
 #include "utils.h"
+#include "compiler.h"
 
 int main(int argc, char *argv[]) 
 {
+	InstructImg instructImg;
+	DataImg dataImg;
+	SymbTable symbTable;
+	ParsedFile pf;
 
-	if (argc == 1)
-		//TO DO: print error - missing file;
-		return 1;
-
-	for (int i = 0; i < count; ++i)
+	if (argc == 1) //check for file input
 	{
-		init();
-		error = excute(argv[i]);
-		if (error)
+		printMisinFileError();
+		return 1;
+	}
+	for (int i = 0; i < argc; ++i)
+	{		
+		initDataImg(&dataImg);
+		initSymbTable(&symbTable);
+		initParsedFile(&pf);
+
+		parsingError = excute(argv[i], instructImg, dataImg, symbTable, pf);
+
+		if (parsingError)
 		{
 			printfError(error);
 		}
