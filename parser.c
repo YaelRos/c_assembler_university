@@ -51,81 +51,6 @@ void parseSecLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataI
 	return;
 }
 
-void parseFirstLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
-{
-	void (parseDType[2])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
-
-	if(isFirstFieldSymb(line))
-	{
-		line->symbFlag = 1;
-		validateSymb(line);
-	}
-	else
-	{
-		line->symbFlag = 0;
-	}
-	if(isData(line))
-	{
-		if (line->lineType == EXTERN_TYPE)
-		{
-			return handleExternCase(line, dataImg, instructImg, symbNode, symbTable);
-		}
-		else if (line->lineType == DATA_TYPE)
-		{
-			if (line->symbFlag)
-			{
-				SymbNode *symbNode
-				initSymbNode(line->symbValue, dataImg, instructImg, symbNode, DATA_TYPE);
-				updateValuesInSymbTable(symbTable, symbNode);
-			}
-			parseDType[line->dataType](line, dataImg);
-		}
-		return;
-	}
-	else 
-	{
-		if (line->symbFlag)
-		{
-			SymbNode *symbNode
-			initSymbNode(line->symbValue, dataImg, instructImg, symbNode, CODE_TYPE);
-			updateValuesInSymbTable(symbTable, symbNode);
-		}
-		getInstrucName(line);
-		getOperandsStruct(line);
-		calculateL(line);
-		buildBinaryCodeFirstLn(line);
-		instructImg->ic = instructImg->ic + L
-	}	
-}
-
-int isFirstFieldSymb(ParsedLineNode* line, SymbTable * symbTable)
-{
-	char* label;
-	if (strchr(line->line ,":") == NULL)
-		return 0;
-	else
-		return 1;
-}
-
-void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
-{
-	char* label;
-	label = strchr(line->line ,":");
-	if ((strlen(line)-strlen(label)) > LABEL_MAX_LEN)
-	{
-		 printError(LABEL_EXCEEDED_MAX_LEN_ERROR, line->fileName);
-		 line->error = LABEL_EXCEEDED_MAX_LEN_ERROR;
-	}
-	else
-	{
-		getSymbValue(line, label);
-		if (isSymbInSymbTable(label, symbTable))
-		{
-			printError(DUP_LABEL_NAME_ERROR);
-			line->error = DUP_LABEL_NAME_ERROR;
-		}
-	}
-}
 
 
 void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg, 
@@ -156,42 +81,7 @@ void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg,
 	}
 }
 
-int isData(ParsedLineNode * line)
-{
-	trimwhitespace(line->line);
-	if (line->line[FIRST_INDEX] == '.')
-	{
-		line->line++;
-		if(isDataStorage(line))
-		else
-		{
-			setStorageEntryOrExtern(line);
-		}
-		return 1;
-	}
-	else
-	{
-		line->instructLine = 1;
-		return 0;
-	}
-}	
 
-int isDataStorage(ParsedLineNode * line) 
-{
-	if (strncmp(line->line, DATA, 4) == 0)
-	{
-		line->lineType = DATA_TYPE;
-		line->dataType = DOT_DATA_TYPE;
-		return 1;
-	}
-	else if (strncmp(line->line, STRING, 6) == 0)
-	{
-		line->lineType = DATA_TYPE;
-		line->dataType = DOT_STRING_TYPE;
-		return 1;
-	}
-	return 0;
-}
 
 void setStorageEntryOrExtern(ParsedLineNode * line) 
 {	
@@ -322,13 +212,8 @@ AddressingMethod getAddressindMethod(char* operand, SymbTable *symbTable)
 	}
 }
 
-void getSymbValue(ParsedLineNode* line, char* label)
-{
-	int lenLabel;
-	lenLabel = strlen(line->line)- strlen(label)
-	strncpy(line->symbValue,line->line, lenLabel)
-	line->line = line->line + lenLabel;
-}
+
+
 
 void setSymbFromExternEntry(ParsedLineNode* line, int etLen)
 {
@@ -379,3 +264,111 @@ void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 	}
 }
 
+/*
+	Check if the line is Data line.
+	@param ParsedLineNode * line - The object of the current line. 
+	@return int - A flag representing if the line is Data line or not. 0 = False, 1 = True
+*/
+int isDataStorage(ParsedLineNode * line) 
+{
+	int isData, isStr;
+	if (((isData=strncmp(line->line, DATA, DATA_LEN)) == 0) | 
+		((isStr= strncmp(line->line, STRING, STRING_LEN)) == 0))
+	{
+		line->lineType = DATA_TYPE;
+		line->typeHandle->dataType = (isData == 0 ? DOT_DATA_TYPE : DOT_STRING_TYPE);
+		return 1;
+	}
+	return 0;
+}
+
+/*
+	Check if the line is guidance line.
+	if there is '.' in the beginning of the line, it indicates that it's a guidance line.
+	@param ParsedLineNode * line - The object of the current line. 
+	@return int - A flag representing if the line is guidance line or not. 0 = False, 1 = True
+*/
+int isGuidanceType(ParsedLineNode* line)
+{
+	trimwhitespace(line->ln);
+	if (*(line->ln) == '.')
+	{
+		line->ln++;
+		if(isDataStorage(line))
+		else
+		{
+			setStorageEntryOrExtern(line);
+		}
+		return 1;
+	}
+	else
+	{
+		line->lineType = CODE_TYPE;
+		return 0;
+	}
+}	
+
+/*
+	Set the symbol value in the line object to be 
+	the symbol which defined at the beginning of the line,
+	and move the string pointer forward as the length of the symbol value.
+	@param ParsedLineNode* line - The object of the current line. 
+	@param char* label - The substring of line->ln which start at the end of the label.
+*/
+void setSymbValue(ParsedLineNode* line, char* label)
+{
+	int lenLabel;
+	lenLabel = strlen(line->ln)- strlen(label);
+	memcpy(line->symbValue,line->ln, lenLabel);
+	line->ln = line->ln + lenLabel;
+}
+
+/*
+	Check if the symbol which defined at the beginning of the line is valid,
+	if is not valid - will update it as an error. 
+	if there is ':' in the line, it indicates that it's a definition.
+	@param ParsedLineNode* line - The object of the current line. 
+	@param SymbTable* symbTable - The symbol table
+*/
+void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
+{
+	char* label;
+	label = strchr(line->ln ,":");
+	if ((strlen(line)-strlen(label)) > LABEL_MAX_LEN) /*max label size is 31*/
+	{
+		line->error = LABEL_EXCEEDED_MAX_LEN_ERROR;
+	} 
+	else if(!isalpha(*(line->ln))) /*first char of label is alphabetic*/
+	{
+		line->error = LABEL_START_ERROR;
+	}
+	else
+	{
+		setSymbValue(line, label);
+		strcpy(label, line->symbValue);
+		while(isalnum(*label)) label++; /* all the chars of the label are alphabetic or numeric */
+		if (label != '\0')
+		{
+			line->error = ILLIGALE_CHAR_ERROR;
+		}
+		else if (symbTableContains(line->symbValue, symbTable)) /* each definition of label can appear one time */
+		{
+			line->error = DUP_LABEL_NAME_ERROR;
+		}
+		else if (isSavedWord(line->symbValue)) /* label name can't be equal to a saved word in c language */
+		{
+			line->error = LABEL_EQUAL_TO_SAVED_WORD_ERROR;
+		}
+	}
+}
+
+/*
+	Check if there is a symbol definition at the beginning of the line.
+	if there is ':' in the line, it indicates that it's a definition.
+	@param char* ln - The string of the current line. 
+	@return int - A flag representing if we found a symbol or not. 0 = False, 1 = True
+*/
+int isFirstFieldSymb(char* ln)
+{
+	return (strchr(ln ,":") != NULL)
+}

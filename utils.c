@@ -151,50 +151,26 @@ void appendExtensionToFilename(char* dst, char* src, char* extension)
 
 }
 
-int isEmptyLine (char* line)
+/* 
+	Remove white space from the beginning and the end of the line.
+	@param char* line - The current read line from the file 
+*/
+void trimwhitespace(char *ln)
 {
-	while (*inputRow != '\0') {
-		if (!isspace(*inputRow)) {
-			return 0;
-		}
-		inputRow++;
-	}
-	return 1;
-}
+	char *end;
+	
+	while(isspace(*ln)) ln++; // Trim leading space
 
-int isCommentLine()
-
-void rmvSpace(char* str) 
-{
-	while(str[FIRST_INDEX] == ' ' or str[FIRST_INDEX] == '\t')
+	if(*ln == 0)
 	{
-		str++;
+		return;
 	}
-}
 
-// Note: This function returns a pointer to a substring of the original string.
-// If the given string was allocated dynamically, the caller must not overwrite
-// that pointer with the returned value, since the original pointer must be
-// deallocated using the same allocator with which it was allocated.  The return
-// value must NOT be deallocated using free() etc.
-char *trimwhitespace(char *str)
-{
-  char *end;
+	// Trim trailing space
+	end = ln + strlen(ln) - 1;
+	while(end > ln && isspace(*end)) end--;
 
-  // Trim leading space
-  while(isspace((unsigned char)*str)) str++;
-
-  if(*str == 0)  // All spaces?
-    return str;
-
-  // Trim trailing space
-  end = str + strlen(str) - 1;
-  while(end > str && isspace((unsigned char)*end)) end--;
-
-  // Write new null terminator character
-  end[1] = '\0';
-
-  return str;
+	end[1] = '\0'; // Write new null terminator character
 }
 
 void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instructImg, SymbNode* symbNode, SymbTable* symbTable)
@@ -221,23 +197,6 @@ void parsedLineNodeCpy(ParsedLineNode *dst, ParsedLineNode *src)
 	dst->parseLine *next = NULL;
 }
 
-int isSymbExist(SymbTable *symbTable, char* symbValue)
-{
-	int i;
-	SymbNode *symbNode;
-	if((symbNode = (SymbNodes*)malloc(sizeof(SymbNodes))) == NULL)
-	{
-		//to do
-	}
-	symbNode = ymbTable->head;
-	for (int i = 0; i < symbTable->counter; ++i)
-	{
-		if ((symbNode->symbValue) == symbValue)
-			return 1;
-		symbNode = symbNode->next;
-	}
-	return 0;
-}
 
 void printWarning(char * str)
 {
@@ -300,3 +259,23 @@ int isValidNumber(char * c)
     return 1; 
 }
 
+/*
+	Check if the string sy is equal to one of the saved wotd in c language. 
+	@param char* sy - The string value
+	@return int - A flag representing if the string is equal to saved word. 0 = False, 1 = True
+*/
+int isSavedWord(char* sy) 
+{
+	int i;
+	char* savedWord[] = {ENTRY, EXTERN, DATA, STRING, R1, R2, R3, R4, R5, R6, R7, 
+		"mov", "cmp", "add", "sub", "lea", "clr", "not", "inc", "dec", "jmp", "bne",
+		"red", "prn", "jsr", "rts", "stop"}
+	for (int i = 0; i < count; i++)
+	{
+		if (strcmp(savedWord[i], sy) == 0)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}

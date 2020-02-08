@@ -1,3 +1,9 @@
+#define LABEL_MAX_LEN 31
+#define FIRST_ADDRES 100
+#define MAX_WORD_LENGTH 15
+#define MAX_LINE_LENGTH 80
+#define MAX_LENTH_OF_INSTRUCT 4
+#define MEM_SIZE 4096
 
 typedef struct dataNode {
 	struct dataNode *next;

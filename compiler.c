@@ -193,6 +193,50 @@ int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTabl
 	return NO_ERROR
 }
 
+void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
+{
+	SymbNode *symbNode;
+	void (parseDType[2])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
+
+	if((line->symbFlag = isFirstFieldSymb(line->ln)) == 1) 
+	{
+		validateSymb(line, symbTable);
+	} 
+	if(isGuidanceType(line))
+	{
+		if (line->lineType == DATA_TYPE)
+		{
+			if (line->symbFlag)
+			{
+				initSymbNode(line->symbValue, dataImg, instructImg, symbNode, DATA_TYPE);
+				updateValuesInSymbTable(symbTable, symbNode);
+			}
+			parseDType[line->dataType](line, dataImg);
+		}
+		else if (line->lineType == EXTERN_TYPE)
+		{
+			return handleExternCase(line, dataImg, instructImg, symbNode, symbTable);
+		}
+		
+		return;
+	}
+	else 
+	{
+		if (line->symbFlag)
+		{
+			SymbNode *symbNode
+			initSymbNode(line->symbValue, dataImg, instructImg, symbNode, CODE_TYPE);
+			updateValuesInSymbTable(symbTable, symbNode);
+		}
+		getInstrucName(line);
+		getOperandsStruct(line);
+		calculateL(line);
+		buildBinaryCodeFirstLn(line);
+		instructImg->ic = instructImg->ic + L
+	}	
+}
+
+
 int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
  SymbTable *symbTable, ParsedFile *parsedFile)
 {
@@ -212,6 +256,7 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 
 	while (fgets(&(ln), LINE_MAX_LENGTH, &fp) != NULL) 
 	{
+		trimwhitespace(ln);
 		if(!isEmptyLine(ln) & !isCommentLine(ln))
 		{
 			if  ((line = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL)
@@ -220,7 +265,7 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 				return MEM_ELLOCATE_ERROR;
 			}
 			initPardedLineNode(line, ln, fileName, ++lineNum);
-			parseFirstLine(line, instructImg, dataImg, symbTable);
+			firstLineAlgo(line, instructImg, dataImg, symbTable);
 			addLineToParsedFile(line, parsedFile, lineNum);
 		}
 	}

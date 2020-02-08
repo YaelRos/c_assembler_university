@@ -14,6 +14,20 @@
 #define EX_EXTENSION ".ext" 
 #define ASSEMBLY_EXTENSION ".as" 
 
-#define isNegative(num) (num[0] == '-' ? 1: 0)
-#define isPositive(num) (num[0] == '+' ? 1: 0)
+#define isNegative(num) (*num == '-' ? 1: 0)
+#define isPositive(num) (*num == '+' ? 1: 0)
 #define lenOfLine(len) (len = (len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len))
+/*
+	check if the line is a comment line.
+	@param char* line - The current read line from the file 
+	@return int - A flag representing if the line is a comment line or not. 0 = False, 1 = True
+*/
+#define isCommentLine(ln) (*ln == ';' ? 1: 0)
+
+/*
+	check if the line is empty.
+	@param char* line - The current read line from the file 
+	@return int - A flag representing if the line is empty or not. 0 = False, 1 = True
+*/
+#define isEmptyLine(ln) (*ln == '\0' ? 1: 0) 
+
