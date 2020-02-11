@@ -1,102 +1,115 @@
-#include "error.h"
 #include "util.h"
 #include "dataStruct.h"
 
-int createOutputFiles(instructImg *instructImg, char *inFileName, int dc)
+/*
+	get the line length and return the smallest value between the line length and the given max length of line.
+*/
+#define lenOfLine(len) (len = (len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len))
+
+
+void createOutputFiles(InstructImg *instructImg, char *inFileName, int dc)
 {
 	int i, keywordInOct;
 	char *memAdd;
-    char outputFileName[MAX_LINE_LENGTH];
-    FILE *fp;
+	char outputFileName[MAX_LINE_LENGTH];
+	FILE *fp;
 	memAdd = (char*)malloc(sizeof(char)) 
-    appendExtensionToFilename(inFileName, outFileName, OBJ_EXTENSION);
+	appendExtensionToFilename(outFileName, inFileName, OBJ_EXTENSION);
 	fp = fopen(outFileName, "w");
-    fprintf(fp, "%d %d\n", instructImg->ic - dc, dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
+	fprintf(fp, "%d %d\n", instructImg->ic - dc, dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
 
-    /* Write every row in Octal */
-    for (i = 0; i < instructImg->ic; i++) {
-        keywordInOct = binaryToOctal(instructImg->instructions[i]);
-        numToMemAdd(memAdd, FIRST_ADDRES+i, DES_MEM_ADD_SIZE+1);
-        fprintf(fp, "%d %d\n", memAdd ,keywordInOct);
-    }    
+	/* Write every row in Octal */
+	for (i = 0; i < instructImg->ic; i++) 
+	{
+		keywordInOct = binaryToOctal(instructImg->instructions[i]);
+		numToMemAdd(memAdd, FIRST_ADDRES+i, DEC_MEM_ADD_SIZE+1);
+		fpintf(fp, "%d %d\n", memAdd ,keywordInOct);
+	}    
 
-    fclose(fp);
-    return 1;
+	fclose(fp);
+	createEntryExternFiles(symbTable, inFileName);
 }
 
-void createOutputFiles(instructImg *instructImg, char *inFileName, int dc)
+void createEntryExternFiles(SymbolTable *symbTable, char *inFileName) 
 {
-	int i, keywordInOct;
-	char *memAdd;
-    char outputFileName[MAX_LINE_LENGTH];
-    FILE *fp;
-	memAdd = (char*)malloc(sizeof(char)) 
-    appendExtensionToFilename(outFileName, inFileName, OBJ_EXTENSION);
-	fp = fopen(outFileName, "w");
-    fprintf(fp, "%d %d\n", instructImg->ic - dc, dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
+	char enOutFileName[MAX_LINE_LENGTH];
+	char exOutFileName[MAX_LINE_LENGTH];
+	FILE *fpEx, *fpEn;
+	int hasEnData = 0, hasExData = 0, i;
+	SymbNode *symbNode = symbTable->head;
 
-    /* Write every row in Octal */
-    for (i = 0; i < instructImg->ic; i++) {
-        keywordInOct = binaryToOctal(instructImg->instructions[i]);
-        numToMemAdd(memAdd, FIRST_ADDRES+i, DES_MEM_ADD_SIZE+1);
-        fprintf(fp, "%d %d\n", memAdd ,keywordInOct);
-    }    
+	appendExtensionToFilename(enOutFileName, inFileName, EN_EXTENSION);
+	appendExtensionToFilename(exOutFileName, inFileName, EX_EXTENSION);
 
-    fclose(fp);
-    createEntryExternFiles(symbTable, inFileName);
+	for (i = 0; i < symbTable->counter; symbNode = symbNode->next, i++)  
+	{   
+		if (symbNode->symbType == ENTRY_TYPE) 
+		{
+			if (!hasEnData) 
+			{
+				fpEn = fopen(enOutFileName, "w");
+				hasEnData = 1;
+			}
+			fprintf(fpEn, "%s %d\n", symbNode->symbName, symbNode->symbAddr);
+		}
+	}
+	for (i = 0; i < symbTable->exTable->counter; i++)
+	{
+		if (!hasExData) 
+		{
+			fpEx = fopen(exOutFileName, "w");
+			hasExData = 1;
+		}
+		fprintf(fpEx, "%s %s\n", symbTable->exTable->externalLabel[i].SymbName,
+		numToMemAdd(symbTable->exTable->externalLabel[i].memAddr));
+	}
+	/* Close files */
+	if (hasEnData) 
+	{
+		fclose(fpEn);
+	}
+	if (hasExData) 
+	{
+		fclose(fpEx);
+	}
 }
 
-void createEntryExternFiles(SymbolTable *symbTable, char *inFileName) {
-    char enOutFileName[MAX_LINE_LENGTH];
-    char exOutFileName[MAX_LINE_LENGTH];
-    FILE *fpEx, *fpEn;
-    int hasEnData = 0, hasExData = 0, i;
-    SymbNode *symbNode = symbTable->head;
-
-    appendExtensionToFilename(enOutFileName, inFileName, EN_EXTENSION);
-    appendExtensionToFilename(exOutFileName, inFileName, EX_EXTENSION);
-
-    for (i = 0; i < symbTable->counter; symbNode = symbNode->next, i++)  
-    {   
-        if (symbNode->symbType == ENTRY_TYPE) 
-        {
-            if (!hasEnData) 
-            {
-                fpEn = fopen(enOutFileName, "w");
-                hasEnData = 1;
-            }
-
-            fprintf(fpEn, "%s %d\n", symbNode->symbName, symbNode->symbAddr);
-        }
-    }
-    for (i = 0; i < symbTable->exTable->counter; i++)
-    {
-        if (!hasExData) 
-        {
-            fpEx = fopen(exOutFileName, "w");
-            hasExData = 1;
-        }
-        fprintf(fpEx, "%s %s\n", symbTable->exTable->externalLabel[i].SymbName,
-         numToMemAdd(symbTable->exTable->externalLabel[i].memAddr));
-    }
-
-    /* Close files */
-    if (hasEnData) 
-    {
-        fclose(fpEn);
-    }
-
-    if (hasExData) 
-    {
-        fclose(fpEx);
-    }
-}
-
-
-
-void freeMem()
+void freeMem(SymbolTable *symbTable, InstructImg* instructImg, 
+	DataImg* dataImg, ParsedFile* pf) 
 {
-	
+	int i;
+	SymbNode *symbNode1, *symbNode2;
+	dataNode *dataNode1, *dataNode2;
+	parsedLine *pLine1, *pLine2;
+
+	symbNode1 = symbTable->head;
+	while (symbNode1 != NULL) 
+	{
+		symbNode2 = symbNode1;
+		symbNode1 = symbNode1->next;
+		free(symbNode2);
+	}
+
+	dataNode1 = dataTable->head;
+	while (dataNode1 != NULL) 
+	{
+		dataNode2 = dataNode1;
+		dataNode1 = dataNode1->next;
+		free(dataNode2);
+	}
+
+	pLine1 = pf->head;
+	while (pf != NULL) 
+	{
+		pLine2 = pLine1;
+		pLine1 = pLine1->next;
+		free(pLine2);
+	}
+
+	for (i = 0; i < instructImg->ic; i++) 
+	{
+		free(instructImg->instructions[i]);
+	}
 }
 
 int binaryToOctal(char* binaryNumStr)
@@ -146,15 +159,33 @@ void numToMemAdd(char* dstNum, int srcNum, int len)
 }
 
 
+
+
+// void parsedLineNodeCpy(ParsedLineNode *dst, ParsedLineNode *src)
+// {
+// 	strcpy(dst->fileName,src->fileName);
+// 	strcpy(dst->line,src->line);
+// 	dst->error = src->error;
+// 	dst->symbFlag = src->symbFlag;
+// 	strcpy(dst->symbValue, src->symbValue);
+// 	dst->symbType = src->symbType;
+// 	strcpy(dst->instructName,src->instructName);
+// 	dst->parseLine *next = NULL;
+// }
+
+
+/*
+	Add the file extension to the file name.
+	@param char* dst - The file name with the extension name.
+	@param char* src - The file name 
+	@param char* extension - The extension type in a string format.
+*/
 void appendExtensionToFilename(char* dst, char* src, char* extension)
 {
-
+	strcpy(dst, src);
+	strcat(dst, extension);
 }
 
-/* 
-	Remove white space from the beginning and the end of the line.
-	@param char* line - The current read line from the file 
-*/
 void trimwhitespace(char *ln)
 {
 	char *end;
@@ -165,7 +196,6 @@ void trimwhitespace(char *ln)
 	{
 		return;
 	}
-
 	// Trim trailing space
 	end = ln + strlen(ln) - 1;
 	while(end > ln && isspace(*end)) end--;
@@ -173,97 +203,71 @@ void trimwhitespace(char *ln)
 	end[1] = '\0'; // Write new null terminator character
 }
 
-void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instructImg, SymbNode* symbNode, SymbTable* symbTable)
-{
-	SymbNode *symbNode
-	if (line->symbFlag)
-	{
-		printWarning(LABEL_BEFORE_EXTERN);
-	}
-	initSymbNode(line->typeHandle->et.labelName, dataImg, instructImg, symbNode, EXTERN);
-	updateValuesInSymbTable(symbTable, symbNode);
-}
-
-void parsedLineNodeCpy(ParsedLineNode *dst, ParsedLineNode *src)
-{
-	strcpy(dst->fileName,src->fileName);
-	dst->lineNum = src->lineNum;
-	strcpy(dst->line,src->line);
-	dst->error = src->error;
-	dst->symbFlag = src->symbFlag;
-	strcpy(dst->symbValue, src->symbValue);
-	dst->symbType = src->symbType;
-	strcpy(dst->instructName,src->instructName);
-	dst->parseLine *next = NULL;
-}
-
-
-void printWarning(char * str)
-{
-
-}
-
-
-void convertDecStrToBinaryStr(char* decSrc,char* binaryDst, bool negative, int len)
-{
-    int mask, num;
-    num = atoi(decSrc);
-	if (isValidNumber(num))
-	{
-		if (isNegative) { /* Handle negative numbers - For two's compliment we need to flip the number and add +1. We'll add before flipping since it makes it easier (And the results are the same!) */
-	        num += 1;
-	        num *= -1;
-	    }
-	    convertNumToBinaryStr(num, binaryDst, negative, len)
-	}
-}
-
-void convertNumToBinaryStr(int num ,char* binary, bool negative, int len)
+void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, bool negative, int len)
 {
 	int mask, num;
-    mask = 1 << (len-1);
-    while (mask) {
-        *binaryDst = getBinaryChar(mask, num, negative);
-        binaryDst++;
-        mask >>= 1;
-    }
-    *(binaryDst) = '\0';
+	num = atoi(decSrc);
+	if (isValidNumber(num))
+	{
+		if (isNegative) /* Handle negative numbers - For two's compliment we need to flip the number and add +1. We'll add before flipping since it makes it easier (And the results are the same!) */
+		{ 
+			num += 1;
+			num *= -1;
+		}
+		convertNumToBinaryStr(num, binaryDst, negative, len)
+	}
 }
 
-char getBinaryChar(int mask, int value, bool isNegative) {
-    if (isNegative) { /* Flip the bit of the results */
-        if ((mask & value) == 0) {
-            return '1';
-        } else {
-            return '0';
-        }
-    } else {
-        if ((mask & value) == 0) {
-            return '0';
-        }
-    }
-    return '1';
+void convertNumToBinaryStr(char* binary, int num, bool negative, int len)
+{
+	int mask, num;
+	mask = 1 << (len-1);
+	while (mask) 
+	{
+		*binaryDst = getBinaryChar(mask, num, negative);
+		binaryDst++;
+		mask >>= 1;
+	}
+	*(binaryDst) = '\0';
 }
 
+
+char getBinaryChar(int mask, int value, bool isNegative) 
+{
+	if (isNegative)
+	{ /* Flip the bit of the results */
+		if ((mask & value) == 0)
+		{
+			return '1';
+		}
+		else
+		{
+			return '0';
+		}
+	}
+	else
+	{
+		if ((mask & value) == 0) 
+		{
+			return '0';
+		}
+	}
+	return '1';
+}
 
 int isValidNumber(char * c) 
 {
 	int i, len;
-  	len = strlen(c);
-  	len = (len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len);
+	len = strlen(c);
+	len = (len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len);
 	for (i = 0; i < len; i++) 
-        if (isdigit(c[i]) == 0) 
-        {
-            return 0; 
-        }
-    return 1; 
+		if (isdigit(c[i]) == 0) 
+		{
+			return 0; 
+		}
+	return 1; 
 }
 
-/*
-	Check if the string sy is equal to one of the saved wotd in c language. 
-	@param char* sy - The string value
-	@return int - A flag representing if the string is equal to saved word. 0 = False, 1 = True
-*/
 int isSavedWord(char* sy) 
 {
 	int i;

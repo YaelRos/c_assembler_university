@@ -1,7 +1,9 @@
 #include "utils.h"
-#define START 1
 #define EXTERN_LEN 6
 #define NUM_OF_INSTRUCTION 16
+#define isImmediate(operand) (operand[0] == '#' ? true: false)
+#define isIndirectReg(operand) (((operand[0] == '*') && (operand[1] == 'r')) ? true: false) //can add check for valid register
+#define isDirectReg(operand) ((operand[0] == 'r') ? true: false)
 
 static OpCode opCodesMatch[NUM_OF_INSTRUCTION] = {
 	{"mov", MOV, TWO_OPERANDS},
@@ -23,66 +25,6 @@ static OpCode opCodesMatch[NUM_OF_INSTRUCTION] = {
 }
 
 
-void parseSecLine(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable)
-{
-	if(line->symbType == DATA_TYPE | line->symbType == EXTERN_TYPE)
-	{
-		return;
-	}
-	else if (line->symbType == ENTRY_TYPE)
-	{
-		SymbNode *symbNode;
-		if(getSymbFeature(symbTable, line->typeHandle->et.labelName, symbNode) == NULL)
-		{
-			printError(LABEL_NOT_IN_SYMB_TABLE);
-			line->error = LABEL_NOT_IN_SYMB_TABLE;
-		}
-		else
-		{
-			symbNode->symbType = ENTRY_TYPE;
-		}
-		return;
-	}
-	else 
-	{
-		updateBinaryMachineCode(line, instructImg, symbTable);
-	}
-	instructImg->ic = instructImg->ic + L;
-	return;
-}
-
-
-
-void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg, 
-	SymbTable *symbTable)
-{
-	SymbNode *symbNode;
-	
-	if(getSymbFeature(symbTable, line->symbValue, symbNode) == NULL)
-	{
-		printError(LABEL_NOT_IN_SYMB_TABLE);
-		line->error = LABEL_NOT_IN_SYMB_TABLE;
-	}
-	else
-	{
-		InstructionNode *in;
-		char *dst; 
-		convertNumToBinaryStr(symbNode->symbAddr ,dst, false, IMM_VAL_LEN_BITS)
-		memcpy(in->instruction, dst, IMM_VAL_LEN_BITS);
-		instructImg->instructions[instructImg->ic++]=in; 
-	}
-	if (symbNode->symbType == EXTERN_TYPE)
-	{
-		memcpy(in->instruction+IMM_VAL_LEN_BITS, E, ARE_LEN_BITS);
-	}
-	else
-	{
-		memcpy(in->instruction+IMM_VAL_LEN_BITS, R, ARE_LEN_BITS);
-	}
-}
-
-
-
 void setStorageEntryOrExtern(ParsedLineNode * line) 
 {	
 	if(strncmp(line->line, ENTRY, ENTRY_LEN) == 0)
@@ -97,73 +39,6 @@ void setStorageEntryOrExtern(ParsedLineNode * line)
 	}
 }
 
-void getInstrucName(ParsedLineNode* line)
-{
-	int i = 0;
-	char instruc[MAX_LENTH_OF_INSTRUCT+1];
-	trimwhitespace(line->line);
-	while(!isspace(line->line[i]))
-	{
-		instruc[i] = line->line[i];
-		i++;
-	}
-	instruc[i] = '\0';
-	i = 0;
-	while (i<NUM_OF_INSTRUCTION && strcmp(instruc, opCodesMatch[i].opCodeName))
-	{
-		i++;
-	}
-	line->line = (line->line)+i;
-	if (i == NUM_OF_INSTRUCTION)
-	{
-		printError(INSTRUCTION_DOES_NOT_EXIST_ERROR);
-		line->error= INSTRUCTION_DOES_NOT_EXIST_ERROR;
-	}
-	else
-	{
-		line->typeHandle = opCodesMatch[i].opCodeNum;
-	}
-
-}
-
-AddressingMethod getOperand(char* line, char* operand, SymbTable *symbTable)
-{
-	AddressingMethod am;
-	int i = 0;
-	operand = (char*)malloc(LABEL_MAX_LEN* sizeof(char));
-	trimwhitespace(line->line);
-	while(!isspace(line->line[i]))
-	{
-		operand[i] = line->line[i];
-		i++;
-	}
-	operand[i] = '\0';
-
-	line = line+i;
-	am = getAddressindMethod(operand, symbTable);
-	return am;
-}
-
-
-char * getFirstOperand(ParsedLineNode* line, SymbTable *symbTable)
-{
-	AddressingMethod am;
-	char* operand;
-	am = getOperand(line->line,operand, symbTable);
-	strcpy(line->typeHandle.opSrc, operand);
-	line->typeHandle.opSrcMethod = am;
-	getSecOperand(line, symbTable);
-}
-
-
-char * getSecOperand(ParsedLineNode *line, SymbTable *symbTable)
-{
-	AddressingMethod am;
-	char* operand;
-	am = getOperand(line->line, operand, symbTable);
-	strcpy(line->typeHandle.opDst, operand)
-	line->typeHandle.opDstMethod = am
-}
 
 bool isDirect(operand, SymbTable *symbTable)
 {
@@ -213,22 +88,190 @@ AddressingMethod getAddressindMethod(char* operand, SymbTable *symbTable)
 }
 
 
-
-
-void setSymbFromExternEntry(ParsedLineNode* line, int etLen)
+void validateStringType(ParsedLineNode* line, char * string)
 {
-	line->line = line->line + etLen
-	trimwhitespace(line->line);
-	memcpy(line->typeHandle->et.labelName, line->line);
+	//check for  ""
+	//MISS_PARAM_ERROR check for an empty data
+	//EXTRA_TEXT_ERROR
+}
+
+void validateDataType(ParsedLineNode* line, char* data)
+{	
+	char* validData;
+	char comma[2] = ",";
+	int commaFlag = 0, positivitySignFlag = 0;
+
+	validData = (char*)malloc(sizeof(char));
+	strcpy(validData, data);
+
+    if (*validData == '\0') 
+    {
+        line->error = EMPTY_DATA_ERROR;
+        return;
+    } 
+    else if (*validData == ',') 
+    {
+        line->error = ILL_COMMA_ERROR;
+        return;
+    } 
+    else if (!isdigit(*validData) && !(*validData == '-'  || *validData == '+' ))
+    {
+    	line->error = ILL_DATA_TYPE_ERROR;
+    	return;
+    }
+    else
+    {
+    	validData++;
+    } 
+
+    while (*validData != '\0' && *validData != '\n') 
+    {
+    	if (*validData == ',') 
+    	{
+            if (commaFlag || (!isspace(*(validData-1)) && !isdigit(*(validData-1)))) { /* Check if consecutive commas, or if neighbours aren't a digit or a space*/
+                pr->errorType = ILLEGAL_COMMA_IN_DATA_DECLARATION;
+                return;
+            }
+            commaFlag = 1;
+            positivitySignFlag = 0;
+        } 
+        else if ((*rawData == '-'  || *rawData == '+' )) 
+        {
+            if (isdigit(*(rawData-1)) || !isdigit(*(rawData+1)) || positivitySignFlag) { /* After a sign we must see a number, and we can't have multiple signs for a number*/
+                pr->errorType = ILLEGAL_POSITIVITY_SIGN_IN_DATA_DECLARATION;
+                return;
+            }
+            positivitySignFlag = 1;
+        } 
+        else if (isdigit(*rawData)) 
+        {
+            commaFlag = 0;
+        } 
+        else if (isspace(*rawData))
+        {
+            if (isdigit(*(rawData-1)) && isdigit(*(rawData+1))) {
+                pr->errorType = ILLEGAL_DATA_DECLARATION_EXTRANEOUS_SPACE;
+                return;
+            }
+        } 
+        else 
+        {
+            pr->errorType = ILLEGAL_DATA_DECLARATION_CHARACTER;
+            return;
+        }
+        validData++;
+    }
+
+    if (commaFlag || *rawData == ',') 
+    {
+        pr->errorType = ILLEGAL_DATA_DECLARATION_EXTRANEOUS_COMMA;
+        return;
+    }
+
+	//MULTI_CONSEC_COMMAS_ERROR
+	/* After a sign we must see a number, and we can't have multiple signs for a number*/
+	//MISS_PARAM_ERROR
+	//MISS_COMMA_ERROR
+	//EXTRA_TEXT_ERROR
+	//SET_MEM_NOT_INT_ERROR
+}
+
+void getSecOperand(ParsedLineNode *line, SymbTable *symbTable)
+{
+	AddressingMethod am;
+	char* operand;
+	am = getOperand(line->line, operand, symbTable);
+	if (*line->ln != '\0' || *line->ln != '\n')
+	{
+		line->error = EXTRA_TEXT_ERROR;
+		return;
+	}
+	strcpy(line->typeHandle.opDst, operand)
+	line->typeHandle.opDstMethod = am
+}
+
+AddressingMethod getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable)
+{
+	AddressingMethod am;
+	int i = 0;
+	operand = (char*)malloc(LABEL_MAX_LEN* sizeof(char));
+	trimwhitespace(line->ln);
+	if (*line->ln == '\0' || *line->ln == '\n')
+	{
+		line->error = NO_OPERANDS_ERROR;
+		return NO_ADD_METHOD;
+	}
+	else if (*line->ln == ',')
+	{
+		line->error = MISS_PARAM_ERROR;
+		return NO_ADD_METHOD;
+	}
+	while(!isspace(line[i]) && line[i] != ',' && line[i] != '\0' && line[i] != '\n')
+	{
+		operand[i] = line[i];
+		i++;
+	}
+	operand[i] = '\0';
+
+	line = line+i-1;
+	am = getAddressindMethod(operand, symbTable);
+	return am;
+}
+
+void getFirstOperand(ParsedLineNode* line, SymbTable *symbTable)
+{
+	AddressingMethod am;
+	char* operand;
+	
+	am = getOperand(line, operand, symbTable);
+	strcpy(line->typeHandle.opSrc, operand);
+	line->typeHandle->instruct.opSrcMethod = am;
+	trimwhitespace(line->ln);
+	if (*line->ln != ',') 	/* remove , between first and second operand */
+	{
+		line->error = MISS_COMMA_ERROR;
+		return;
+	}
+	line->ln++;
+	getSecOperand(line, symbTable);
+}
+
+void getInstrucName(ParsedLineNode* line)
+{
+	int i = 0;
+	char instruc[MAX_LENTH_OF_INSTRUCT+1];
+	trimwhitespace(line->ln);
+	while(!isspace(line->ln[i]))
+	{
+		instruc[i] = line->ln[i];
+		i++;
+	}
+	instruc[i] = '\0';
+
+	i = 0;
+	while (i<NUM_OF_INSTRUCTION && strcmp(instruc, opCodesMatch[i].opCodeName))
+	{
+		i++;
+	}
+	line->ln = (line->ln)+i;
+	if (i == NUM_OF_INSTRUCTION)
+	{
+		line->error= INSTRUCTION_DOES_NOT_EXIST_ERROR;
+	}
+	else
+	{
+		line->typeHandle = opCodesMatch[i].opCodeNum;
+	}
 }
 
 void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 {
-	char *dec;
-	char *binary;
+	char *dec, *binary;
 	int negative = 0;
 	char comma[2] = ",";
-	strcpy(dec, line->line);
+
+	strcpy(dec, line->ln);
+	validateDataType(dec);
 	strtok(dec, comma);
 	while (dec != NULL)
 	{
@@ -238,37 +281,32 @@ void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 		{
 			dec++;
 		}
-		convertDecStrToBinaryStr(dec, binary, negative, MAX_WORD_LENGTH)
+		convertDecToBinaryStr(binary, dec, negative, MAX_WORD_LENGTH+1)
 		addNumToDataImg(binary, dataImg);
 		dec = strtok(NULL, comma)
 	}
 }
+
 
 void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 {
 	int len;
 	char c;
 	char* binary;
-
-	trimwhitespace(line->line);
-	len = strlen(line->line);
+	validateStringType(line->ln);
+	trimwhitespace(line->ln);
+	len = strlen(line->ln);
 	lenOfLine(len);
+
 	for (int i = 0; i < len; i++)
 	{
-		c = line->line[i];
-	 	if (isalpha(c))
-	 	{
-	 		convertNumToBinaryStr(c , binary, false, MAX_WORD_LENGTH)
-	 		addNumToDataImg(binary, dataImg);
-	 	}
+		c = line->ln[i];
+		convertNumToBinaryStr(binary, int(c), false, MAX_WORD_LENGTH)
+		addNumToDataImg(binary, dataImg);
 	}
 }
 
-/*
-	Check if the line is Data line.
-	@param ParsedLineNode * line - The object of the current line. 
-	@return int - A flag representing if the line is Data line or not. 0 = False, 1 = True
-*/
+
 int isDataStorage(ParsedLineNode * line) 
 {
 	int isData, isStr;
@@ -282,12 +320,7 @@ int isDataStorage(ParsedLineNode * line)
 	return 0;
 }
 
-/*
-	Check if the line is guidance line.
-	if there is '.' in the beginning of the line, it indicates that it's a guidance line.
-	@param ParsedLineNode * line - The object of the current line. 
-	@return int - A flag representing if the line is guidance line or not. 0 = False, 1 = True
-*/
+
 int isGuidanceType(ParsedLineNode* line)
 {
 	trimwhitespace(line->ln);
@@ -308,28 +341,7 @@ int isGuidanceType(ParsedLineNode* line)
 	}
 }	
 
-/*
-	Set the symbol value in the line object to be 
-	the symbol which defined at the beginning of the line,
-	and move the string pointer forward as the length of the symbol value.
-	@param ParsedLineNode* line - The object of the current line. 
-	@param char* label - The substring of line->ln which start at the end of the label.
-*/
-void setSymbValue(ParsedLineNode* line, char* label)
-{
-	int lenLabel;
-	lenLabel = strlen(line->ln)- strlen(label);
-	memcpy(line->symbValue,line->ln, lenLabel);
-	line->ln = line->ln + lenLabel;
-}
 
-/*
-	Check if the symbol which defined at the beginning of the line is valid,
-	if is not valid - will update it as an error. 
-	if there is ':' in the line, it indicates that it's a definition.
-	@param ParsedLineNode* line - The object of the current line. 
-	@param SymbTable* symbTable - The symbol table
-*/
 void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 {
 	char* label;
@@ -362,12 +374,7 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 	}
 }
 
-/*
-	Check if there is a symbol definition at the beginning of the line.
-	if there is ':' in the line, it indicates that it's a definition.
-	@param char* ln - The string of the current line. 
-	@return int - A flag representing if we found a symbol or not. 0 = False, 1 = True
-*/
+
 int isFirstFieldSymb(char* ln)
 {
 	return (strchr(ln ,":") != NULL)

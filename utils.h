@@ -1,12 +1,5 @@
-#define FIRST_INDEX 0
-#define LABEL_MAX_LEN 31
-#define FIRST_ADDRES 100
-#define MAX_WORD_LENGTH 15
-#define MAX_LINE_LENGTH 80
-#define MAX_LENTH_OF_INSTRUCT 4
-#define MEM_SIZE 4096
 #define OCT_KEYWORD_SIZE 5
-#define DES_MEM_ADD_SIZE 4
+#define DEC_MEM_ADD_SIZE 4
 #define MAX_NUM_WITH_3_DIGIT 999
 
 #define OBJ_EXTENSION ".ob" 
@@ -14,20 +7,81 @@
 #define EX_EXTENSION ".ext" 
 #define ASSEMBLY_EXTENSION ".as" 
 
+
 #define isNegative(num) (*num == '-' ? 1: 0)
 #define isPositive(num) (*num == '+' ? 1: 0)
-#define lenOfLine(len) (len = (len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len))
 /*
-	check if the line is a comment line.
+	Check if the line is a comment line.
 	@param char* line - The current read line from the file 
 	@return int - A flag representing if the line is a comment line or not. 0 = False, 1 = True
 */
 #define isCommentLine(ln) (*ln == ';' ? 1: 0)
 
 /*
-	check if the line is empty.
+	Check if the line is empty.
 	@param char* line - The current read line from the file 
 	@return int - A flag representing if the line is empty or not. 0 = False, 1 = True
 */
 #define isEmptyLine(ln) (*ln == '\0' ? 1: 0) 
 
+void numToMemAdd(char* dstNum, int srcNum, int len);
+int binaryToOctal(char* binaryNumStr);
+void createEntryExternFiles(SymbolTable *symbTable, char *inFileName);
+void createOutputFiles(InstructImg *instructImg, char *inFileName, int dc);
+void freeMem(SymbolTable *symbTable, InstructImg* instructImg, DataImg* dataImg, ParsedFile* pf);
+/*
+	Add the file extension to the file name.
+	@param char* dst - The file name with the extension name.
+	@param char* src - The file name 
+	@param char* extension - The extension type in a string format.
+*/
+void appendExtensionToFilename(char* dst, char* src, char* extension);
+
+/* 
+	Remove white space from the beginning and the end of the line.
+	@param char* line - The current read line from the file 
+*/
+void trimwhitespace(char *ln);
+
+/*
+	convert a decimal number which is represented by a string to binary number which 
+	is represented by a string.
+
+	@param char* binaryDst - The converted string in binary (an empty value)
+	@param char* decSrc - The string to convert
+	@param char* negative - A flag representing if the number id negative or not. 0 = False, 1 = True. 
+	@param char* len - number of BITs in the binary number, each BIT will represented by one char
+*/
+void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, bool negative, int len);
+
+/*
+	convert a decimal number which is represented by a string to binary number which 
+	is represented by a string.
+
+	@param char* binary - The converted string in binary
+	@param char* num - The string to convert
+	@param char* negative - A flag representing if the number id negative or not. 0 = False, 1 = True. 
+	@param char* len - number of BITs in the binary number, each BIT will represented by one char
+*/
+void convertNumToBinaryStr(char* binary, int num, bool negative, int len);
+
+/* 
+    Get the binary character for a number with a given mask.
+    If the negativity number is on, we flip the results
+    @param int mask - The mask we're comparing the number with
+    @param int value - The original value, in it's absolute value, and +1 if previously negative
+    @param int isNegative - Negativity flag
+*/
+char getBinaryChar(int mask, int value, bool isNegative);
+
+/*
+	Check if the given string is a valid number.  
+*/
+int isValidNumber(char * c);
+
+/*
+	Check if the string sy is equal to one of the saved wotd in c language. 
+	@param char* sy - The string value
+	@return int - A flag representing if the string is equal to saved word. 0 = False, 1 = True
+*/
+int isSavedWord(char* sy);

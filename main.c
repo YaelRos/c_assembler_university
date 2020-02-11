@@ -23,17 +23,11 @@ int main(int argc, char *argv[])
 
 		parsingError = excute(argv[i], instructImg, dataImg, symbTable, pf);
 
-		if (parsingError)
-		{
-			printfError(error);
-		}
-		else
+		if (!parsingError)
 		{
 			createOutputFiles();
 		}
-		freeMem()
+		freeMem(symbTable, instructImg, dataImg, pf) 
 		printf("The file: %s\n has compiled successfully", argv[i]);
 	}
-	
-	
 }

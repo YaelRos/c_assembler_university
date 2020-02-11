@@ -1,15 +1,7 @@
-#define isImmediate(operand) (operand[0] == '#' ? true: false)
-#define isIndirectReg(operand) (((operand[0] == '*') && (operand[1] == 'r')) ? true: false) //can add check for valid register
-#define isDirectReg(operand) ((operand[0] == 'r') ? true: false)
 #define ONE_ADDITIONAL_LINE 1
 #define TWO_ADDITIONAL_LINE 2
 #define NO_ADDITIONAL_LINE 0
-#define OPCODE_LEN_BITS 4
-#define REG_METHOD_LEN_BITS 4
-#define ARE_LEN_BITS 3
-#define IMM_VAL_LEN_BITS 12
-#define REG_VAL_BITS 3
-#define REG_PRIOR_BITS 6
+
 #define EMPTY_BMC "000000000000000"
 #define A "100"
 #define R "010"
@@ -24,6 +16,10 @@
 #define EXTERN_LEN 6
 #define STR_LEN 6
 #define DATA_LEN 4
+
+void setStorageEntryOrExtern(ParsedLineNode * line);
+bool isDirect(operand, SymbTable *symbTable);
+AddressingMethod getAddressindMethod(char* operand, SymbTable *symbTable);
 
 /*
 	Check if there is a symbol definition at the beginning of the line.
@@ -65,3 +61,54 @@ int isGuidanceType(ParsedLineNode* line);
 	@return int - A flag representing if the line is Data line or not. 0 = False, 1 = True
 */
 int isDataStorage(ParsedLineNode * line);
+
+/*
+	Encodes each char (which represented by is ASCII binary value) into the data image.
+
+	@param ParsedLineNode * line - The object of the current line.
+	@param DataImg* dataImg - The data image.
+*/
+void parseStringType(ParsedLineNode* line, DataImg *dataImg);
+
+/*
+	Encodes the data in the data image
+
+	@param ParsedLineNode * line - The object of the current line.
+	@param DataImg* dataImg - The data image.
+*/
+void parseDataType(ParsedLineNode* line, DataImg *dataImg);
+
+/*
+	gat the operand name from the line string and convert it to the suitable opcode,
+	save it in the object of the line.
+
+	@param ParsedLineNode * line - The object of the current line.
+*/
+void getInstrucName(ParsedLineNode* line);
+
+/*
+	Get the source operand first and than the destination operand and save them 
+	in the InstructionStruct object
+
+	@param ParsedLineNode * line - The object of the current line.
+	@param SymbTable* symbTable - The symbol table
+*/
+void getFirstOperand(ParsedLineNode* line, SymbTable *symbTable);
+
+/*
+	Get the next operand from the given line
+
+	@param ParsedLineNode * line - The object of the current line.
+	@param char* operand - The string which represent the operand. 
+	@param SymbTable* symbTable - The symbol table
+	@return AddressingMethod - Integer which represent the addressing method code
+*/
+AddressingMethod getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable);
+
+/*
+	Get the destination operand and save it in the InstructionStruct object.
+
+	@param ParsedLineNode * line - The object of the current line.
+	@param SymbTable* symbTable - The symbol table
+*/
+void getSecOperand(ParsedLineNode *line, SymbTable *symbTable);
