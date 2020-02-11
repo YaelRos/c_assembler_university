@@ -1,6 +1,6 @@
+#include <string.h>
 #include "utils.h"
-#define EXTERN_LEN 6
-#define NUM_OF_INSTRUCTION 16
+
 #define isImmediate(operand) (operand[0] == '#' ? true: false)
 #define isIndirectReg(operand) (((operand[0] == '*') && (operand[1] == 'r')) ? true: false) //can add check for valid register
 #define isDirectReg(operand) ((operand[0] == 'r') ? true: false)

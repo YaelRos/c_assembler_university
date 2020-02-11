@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "errors.h"
 #include "utils.h"
 #include "compiler.h"
 
@@ -25,9 +24,9 @@ int main(int argc, char *argv[])
 
 		if (!parsingError)
 		{
-			createOutputFiles();
+			createOutputFiles(instructImg, inFileName, dc);
 		}
-		freeMem(symbTable, instructImg, dataImg, pf) 
+		freeMem(symbTable, instructImg, dataImg, pf);
 		printf("The file: %s\n has compiled successfully", argv[i]);
 	}
 }

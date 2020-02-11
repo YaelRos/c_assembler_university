@@ -1,13 +1,10 @@
 #define ONE_ADDITIONAL_LINE 1
 #define TWO_ADDITIONAL_LINE 2
 #define NO_ADDITIONAL_LINE 0
-
 #define EMPTY_BMC "000000000000000"
 #define A "100"
 #define R "010"
 #define E "001"
-
-
 #define ENTRY "entry"
 #define EXTERN "extern"
 #define DATA "data"
