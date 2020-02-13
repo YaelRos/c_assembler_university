@@ -1,3 +1,17 @@
+#include <stdio.h>
+#define ERROR "ERROR: "
+#define LABEL_BEFORE_EXTERN "Warning: There's a label at the beginning of the extern line"
+
+#define MISSING_FILE_PARAMETER "missing file parameter"
+#define FETCH_FILE "can't fetch file - "
+#define OUT_OF_MEM "out of memory, can't allocate memory"
+
+
+void printMisinFileError();
+void printFetchFileError(char* inFileName);
+void printMemEllocateError();
+void printError(int error, char* fileName, int numOfRow);
+
 
 enum ERRORS 
 {
@@ -16,18 +30,7 @@ enum ERRORS
 	NO_OPERANDS_ERROR,
 	MISS_COMMA_ERROR,
 	EXTRA_TEXT_ERROR,
-	LABEL_NOT_IN_SYMB_TABLE
+	LABEL_NOT_IN_SYMB_TABLE,
+	NON_EXSIT_ADDRESSING_METHOD
 };
 
-#define ERROR "ERROR: "
-#define LABEL_BEFORE_EXTERN "Warning: There's a label at the beginning of the extern line"
-
-#define MISSING_FILE_PARAMETER "missing file parameter"
-#define FETCH_FILE "can't fetch file - "
-#define OUT_OF_MEM "out of memory, can't allocate memory"
-
-
-void printMisinFileError();
-void printFetchFileError(char* inFileName);
-void printMemEllocateError();
-void printError(int error, char* fileName, int numOfRow);

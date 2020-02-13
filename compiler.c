@@ -1,14 +1,15 @@
 #include "compiler.h"
-#include "dataStruct.h"
-#include "utils.h"
 #include "error.h"
+#include "parser.h"
+
+extern OpCode opCodesMatch[];
 
 void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg, 
 	SymbTable *symbTable)
 {
-	SymbNode *symbNode;
-	InstructionNode *in;
-	char *dst; 
+	SymbNode *symbNode = NULL;
+	struct instructNode *in = NULL;
+	char *dst = NULL; 
 
 	if(getSymbFeature(symbTable, line->symbValue, symbNode) == NULL)
 	{
@@ -17,11 +18,11 @@ void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg,
 	else
 	{
 		/* add the converted (to binary) label address to the instruction row */
-		convertNumToBinaryStr(dst, symbNode->symbAddr, false, IMM_VAL_LEN_BITS);
+		convertNumToBinaryStr(dst, symbNode->symbAddr, 0, IMM_VAL_LEN_BITS);
 		memcpy(in->instruction, dst, IMM_VAL_LEN_BITS);
-		instructImg->instructions[instructImg->ic++]=in; 
+		instructImg->instructions[instructImg->ic++] = *(in); 
 	}
-	if (symbNode->symbType == EXTERN_TYPE)
+	if (symbNode->symbType == EXTERNAL_TYPE)
 	{
 		memcpy(in->instruction+IMM_VAL_LEN_BITS, E, ARE_LEN_BITS);
 	}
@@ -34,15 +35,14 @@ void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg,
 void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg, 
 	SymbTable *symbTable)
 {
-	int i;
 	instructImg->ic++; /* no need to change first line of instruction */
 
-	if (line->typeHandle->instruct->opSrcMethod != DIRECT &
-		line->typeHandle->instruct->opDstMethod != DIRECT ) /* not a direct addressing method though no need to change instructions */
+	if (line->typeHandle.instruct.opSrcMethod != DIRECT &
+		line->typeHandle.instruct.opDstMethod != DIRECT ) /* not a direct addressing method though no need to change instructions */
 	{
-		instructImg->ic = (instructImg->ic) + line->typeHandle->instruct->addLine;
+		instructImg->ic = (instructImg->ic) + line->typeHandle.instruct.addLine;
 	}
-	else if (line->typeHandle->instruct->opSrcMethod != DIRECT)
+	else if (line->typeHandle.instruct.opSrcMethod != DIRECT)
 	{
 		addDirectLabelToMem(line, instructImg, symbTable);
 	}
@@ -53,51 +53,52 @@ void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg,
 	}
 }
 
-void addRegToMem(char *p, bool isNegative, int len, int place, InstructionNode *in)
+void addRegToMem(char *p, int isNegative, int len, int place, struct instructNode *in)
 {
-	char *dst; 
-	convertDecToBinaryStr(dst, p, isNegative, len);
+	char *dst = NULL; 
+	convertDecStrToBinaryStr(dst, p, isNegative, len);
 	memcpy(in->instruction+place, dst, len);
 	memcpy(in->instruction+place+len, A, ARE_LEN_BITS);
 }
 
-void addRegMethodToLn(int opMethod, int place, InstructionNode *in, 
+void addRegMethodToLn(int opMethod, int place, struct instructNode *in, 
 	ParsedLineNode *line, InstructImg* instructImg)
 {
-	char *p = line->typeHandle.instruct.opDst + 1; //less '#' or 'r' or '*'
+	char *p = line->typeHandle.instruct.opDst + 1; /* less '#' or 'r' or '*' */
 	if (opMethod == INDIRECT_REG)
 	{
-		p = p + 1;//less 'r'
+		p = p + 1; /* less 'r' */
 	}
 	switch (opMethod)
 	{
 		case IMMEDIATE: addRegToMem(p, isNegative(p), IMM_VAL_LEN_BITS, 0, in);break;
-		case INDIRECT_REG: DIRECT_REG: addRegToMem(p, false, REG_VAL_BITS, place, in); break;
-		case defalut: break;
+		case DIRECT_REG: case INDIRECT_REG:
+		 addRegToMem(p, 0, REG_VAL_BITS, place, in); break;
+		default: break;
 	}
-	instructImg->instructions[instructImg->ic++]=in; //addBinaryCodeToInstructImg
-	*(instructImg->instructions[instructImg->ic] + MAX_WORD_LENGTH + 1) = '\0';
+	instructImg->instructions[instructImg->ic++]=*in; /* addBinaryCodeToInstructImg */
+	instructImg->instructions[instructImg->ic].instruction[MAX_WORD_LENGTH] = '\0';
 }
 
 void buildBinaryCodeNextLn(ParsedLineNode *line, InstructImg* instructImg)
 {
-	int place;
-	InstructionNode *in1;
-	InstructionNode *in2;
-	memcpy(in1->instruction, EMPTY_BMC, MAX_WORD_LENGTH); // create an empty word in binary format and save it as an instruction.
+	int place = 0;
+	struct instructNode *in1 = NULL;
+	struct instructNode *in2 = NULL;
+	memcpy(in1->instruction, EMPTY_BMC, MAX_WORD_LENGTH); /* create an empty word in binary format and save it as an instruction. */
 
 	switch(line->typeHandle.instruct.addLine)
 	{
 		case ONE_ADDITIONAL_LINE: 
 			addRegMethodToLn(line->typeHandle.instruct.opDstMethod, REG_PRIOR_BITS+REG_VAL_BITS, in1, line, instructImg);
-			if (src != NO_ADD_METHOD)
+			if (line->typeHandle.instruct.opSrcMethod != NO_ADD_METHOD)
 			{
 				instructImg->ic--;
 				addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, place, in1, line, instructImg);
 			}
 			break;
  		case TWO_ADDITIONAL_LINE:
- 			memcpy(in2->instruction, EMPTY_BMC, MAX_WORD_LENGTH); // create an empty word in binary format and save it as an instruction.
+ 			memcpy(in2->instruction, EMPTY_BMC, MAX_WORD_LENGTH); /* create an empty word in binary format and save it as an instruction. */
  			addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, place, in1, line, instructImg);
  			addRegMethodToLn(line->typeHandle.instruct.opSrcMethod, REG_PRIOR_BITS+REG_VAL_BITS, in2, line, instructImg);
 			break;
@@ -105,7 +106,7 @@ void buildBinaryCodeNextLn(ParsedLineNode *line, InstructImg* instructImg)
 	}
 }
 
-int addRegMethodToFirstLn(AddressingMethod opMet, InstructionNode *in, int place)
+int addRegMethodToFirstLn(int opMet, struct instructNode *in, int place)
 {
 	switch (opMet)
 	{
@@ -113,30 +114,35 @@ int addRegMethodToFirstLn(AddressingMethod opMet, InstructionNode *in, int place
 		case DIRECT:	memcpy(in->instruction+place, "0010", REG_METHOD_LEN_BITS); break;
 		case INDIRECT_REG:	memcpy(in->instruction+place, "0100", REG_METHOD_LEN_BITS); break;
 		case DIRECT_REG:	memcpy(in->instruction+place, "1000", REG_METHOD_LEN_BITS); break;
-		case defalut:	memcpy(in->instruction+place, "0000", REG_METHOD_LEN_BITS); break;
+		default:	memcpy(in->instruction+place, "0000", REG_METHOD_LEN_BITS); break;
 	}
 	return place+REG_METHOD_LEN_BITS;
 }
 
 void buildBinaryCodeFirstLn(ParsedLineNode* line, InstructImg* instructImg)
 {
-	int place;
+	struct instructNode* in;
 	char* binary;
-	InstructionNode* in;
-
-	convertNumToBinaryStr(line->typeHandle.instruct.opCode ,binary, false, OPCODE_LEN_BITS);
+	int place = 0;;
+	if ((in = (struct instructNode*) malloc(sizeof(struct instructNode))) ==NULL)
+	{
+		printMemEllocateError();
+		exit(1);
+	}
+	binary = NULL;
+	convertNumToBinaryStr(binary, line->typeHandle.instruct.opCode, 0, OPCODE_LEN_BITS);
 	memcpy(in->instruction, binary, OPCODE_LEN_BITS); /* add opcode */
-	place = addregMethodToFirstLn(line->typeHandle.instruct.opSrcMethod, in, OPCODE_LEN_BITS); /* add src reg method */
-	place = addregMethodToFirstLn(line->typeHandle.instruct.opDstMethod, in, place); /* add dst reg method */
-	mamcpy(in->instruction+place, A, ARE_LEN_BITS); /* add ARE bits */
-	instructImg->instructions[instructImg->ic++]=in; /* addBinaryCodeToInstructImg */
-	*(instructImg->instructions[instructImg->ic] + MAX_WORD_LENGTH+1) = '\0';
-	buildBinaryCodeNextLn();
+	place = addRegMethodToFirstLn(line->typeHandle.instruct.opSrcMethod, in, OPCODE_LEN_BITS); /* add src reg method */
+	place = addRegMethodToFirstLn(line->typeHandle.instruct.opDstMethod, in, place); /* add dst reg method */
+	memcpy(in->instruction+place, A, ARE_LEN_BITS); /* add ARE bits */
+	instructImg->instructions[instructImg->ic++]=*in; /* addBinaryCodeToInstructImg */
+	instructImg->instructions[instructImg->ic].instruction[MAX_WORD_LENGTH] = '\0';
+	buildBinaryCodeNextLn(line, instructImg);
 }
 
 void calculateL(ParsedLineNode* line)
 {
-	switch(opCodesMatch[line->typeHandle->instruct.opCode].instrucGroup)
+	switch(opCodesMatch[line->typeHandle.instruct.opCode].instrucGroup)
 	{
 		case TWO_OPERANDS: 
 			if(line->typeHandle.instruct.opSrcMethod == INDIRECT_REG |
@@ -157,42 +163,43 @@ void calculateL(ParsedLineNode* line)
 				line->typeHandle.instruct.addLine = TWO_ADDITIONAL_LINE;
 			}
 			break;
-		case ONE_OPERAND: line->typeHandle->instruct.addLine = ONE_ADDITIONAL_LINE; break;
-		case NO_OPERANDS: line->typeHandle->instruct.addLine = NO_ADDITIONAL_LINE; break;
+		case ONE_OPERAND: line->typeHandle.instruct.addLine = ONE_ADDITIONAL_LINE; break;
+		case NO_OPERANDS: line->typeHandle.instruct.addLine = NO_ADDITIONAL_LINE; break;
 	}
 }
 
 void getOperandsStruct(ParsedLineNode* line, SymbTable *symbTable) 
 {
-	line->typeHandle.opSrcMethod = NO_ADD_METHOD;
-	line->typeHandle.opDstMethod = NO_ADD_METHOD;
+	
 
-	switch(opCodesMatch[line->typeHandle.opCode].instrucGroup)
+	line->typeHandle.instruct.opSrcMethod = NO_ADD_METHOD;
+	line->typeHandle.instruct.opDstMethod = NO_ADD_METHOD;
+
+	switch(opCodesMatch[line->typeHandle.instruct.opCode].instrucGroup)
 	{
 		case TWO_OPERANDS:	getFirstOperand(line, symbTable); break;
-		case ONE_OPERAND:	getSecOperand(line); break;
+		case ONE_OPERAND:	getSecOperand(line, symbTable); break;
 		case NO_OPERANDS:	break;
-		case defalut:	line->error = UNEXPECTED_RESULT; break;
+		default:	line->error = UNEXPECTED_RESULT; break;
 	}
 }
 
 void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instructImg,
  SymbNode* symbNode, SymbTable* symbTable)
 {
-	SymbNode *symbNode
 	if (line->symbFlag)
 	{
 		printf("%s\n", LABEL_BEFORE_EXTERN);
 	}
-	initSymbNode(line->typeHandle->et.labelName, dataImg, instructImg, symbNode, EXTERN);
+	initSymbNode(line->typeHandle.et.labelName, dataImg, instructImg, symbNode, EXTERNAL_TYPE);
 	addValuesInSymbTable(symbTable, symbNode);
 }
 
 void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg,
  SymbTable *symbTable)
 {
-	SymbNode *symbNode;
-	void (parseDType[NUM_OF_DATA_GUIDANCE])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
+	SymbNode *symbNode = NULL;
+	void (*parseDType[NUM_OF_DATA_GUIDANCE])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
 
 	if((line->symbFlag = isFirstFieldSymb(line->ln)) == 1) 
 	{
@@ -209,14 +216,14 @@ void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *data
 				initSymbNode(line->symbValue, dataImg, instructImg, symbNode, DATA_TYPE);
 				if(addValuesInSymbTable(symbTable, symbNode))
 				{
-					line->error = SYMBOL_ALREADY_EXIST_ERROR;
+					line->error = DUP_LABEL_NAME_ERROR;
 				}
 			}
 			parseDType[line->typeHandle.dataType](line, dataImg);
 		}
-		else if (line->lineType == EXTERN_TYPE)
+		else if (line->lineType == EXTERNAL_TYPE)
 		{
-			return handleExternCase(line, dataImg, instructImg, symbNode, symbTable);
+			handleExternCase(line, dataImg, instructImg, symbNode, symbTable);
 		}
 		return;
 	}
@@ -230,10 +237,9 @@ void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *data
 			addValuesInSymbTable(symbTable, symbNode);
 		}
 		getInstrucName(line);
-		getOperandsStruct(line);
+		getOperandsStruct(line, symbTable);
 		calculateL(line);
 		buildBinaryCodeFirstLn(line, instructImg);
-		instructImg->ic = instructImg->ic + L;
 	}	
 }
 
@@ -242,20 +248,21 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
  SymbTable *symbTable, ParsedFile *parsedFile)
 {
 	FILE *fp;
-	char inFileName, *ln;
+	char inFileName[FILE_NAME_MAX_LEM] ,*ln;
 	ParsedLineNode *line;
 	int lineNum = 0;
+
 
 	instructImg->ic = 0;
 	appendExtensionToFilename(inFileName, fileName, ASSEMBLY_EXTENSION);
 
-	if ((fp = fopen(inFileName, 'r')) == NULL)
+	if ((fp = fopen(inFileName, "r")) == NULL)
 	{
 		printFetchFileError(inFileName);
-		return ERROR_FETCH_FILE;
+		return 1;
 	}
 
-	while (fgets(&(ln), LINE_MAX_LENGTH, &fp) != NULL) 
+	while (fgets(ln, MAX_LINE_LENGTH, fp) != NULL) 
 	{
 		trimwhitespace(ln);
 		if(!isEmptyLine(ln) & !isCommentLine(ln))
@@ -263,7 +270,7 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 			if  ((line = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL)
 			{
 				printMemEllocateError();
-				return MEM_ELLOCATE_ERROR;
+				exit(1);
 			}
 			initPardedLineNode(line, ln);
 			firstLineAlgo(line, instructImg, dataImg, symbTable);
@@ -271,30 +278,30 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 		}
 		if (line->error)
 		{
-			printError(line->error, parsedFile->fileName, lineNum);
+			printError(line->error, parsedFile->filename, lineNum);
 		}
 	}
-	fclose(inFileName);
+	fclose(fp);
 	if(parsedFile->error)
 	{
 		return parsedFile->error;
 	}
-	updateValuesInSymbTable(*symbTable, instructImg->ic);
+	updateValuesInSymbTable(symbTable, instructImg->ic);
 
-	return NO_ERROR
+	return NO_ERROR;
 }
 
 void secLineAlgo(ParsedLineNode* line, InstructImg *instructImg, 
 	DataImg *dataImg, SymbTable *symbTable)
 {
-	if(line->symbType == DATA_TYPE | line->symbType == EXTERN_TYPE)
+	if(line->lineType == DATA_TYPE | line->lineType == EXTERNAL_TYPE)
 	{
 		return;
 	}
-	else if (line->symbType == ENTRY_TYPE)
+	else if (line->lineType == ENTRY_TYPE)
 	{
-		SymbNode *symbNode;
-		if(getSymbFeature(symbTable, line->typeHandle->et.labelName, symbNode) == NULL)
+		SymbNode *symbNode = NULL;
+		if(getSymbFeature(symbTable, line->typeHandle.et.labelName, symbNode) == NULL)
 		{
 			line->error = LABEL_NOT_IN_SYMB_TABLE;
 		}
@@ -312,7 +319,7 @@ void secLineAlgo(ParsedLineNode* line, InstructImg *instructImg,
 }
 
 int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable,
- char *fileName, parsedFile *parsedFile)
+ char *fileName, ParsedFile *parsedFile)
 {
 	ParsedLineNode *line, *tmp;
 	int lineNum = 0;
@@ -322,7 +329,7 @@ int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTabl
 		| ((tmp = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL))
 	{
 		printMemEllocateError();
-		return MEM_ELLOCATE_ERROR;
+		exit(1);
 	}
 	line = parsedFile->head;
 	while (line != NULL) 
@@ -331,24 +338,25 @@ int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTabl
 	
 		if (line->error)
 		{
-			printError(line->error, parsedFile->fileName, ++lineNum);
+			printError(line->error, parsedFile->filename, ++lineNum);
 		}
 		line = line->next;
 	}
-	return NO_ERROR
+	return NO_ERROR;
 }
 
 int ecxcute(char* fileName, InstructImg* instructImg,DataImg* dataImg,SymbTable* symbTable,ParsedFile* pf)
 {
 	int errorNum;
 	errorNum = firstIteration(fileName, instructImg, dataImg, symbTable, pf);
+	pf->filename = fileName;
 	if (errorNum)
 	{
 		return errorNum; 
 	}
 	else
 	{
-		secIteration(instructImg, dataImg, symbTable, fileName, parsedFile);
+		secIteration(instructImg, dataImg, symbTable, fileName, pf);
 	}
 	return errorNum; 
 }

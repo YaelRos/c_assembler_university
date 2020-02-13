@@ -1,3 +1,7 @@
+#include <ctype.h>
+#include <math.h>
+#include "dataStruct.h"
+
 #define OCT_KEYWORD_SIZE 5
 #define DEC_MEM_ADD_SIZE 4
 #define MAX_NUM_WITH_3_DIGIT 999
@@ -7,6 +11,7 @@
 #define EX_EXTENSION ".ext" 
 #define ASSEMBLY_EXTENSION ".as" 
 
+#define NUM_OF_SAVED_WORD 27
 
 #define isNegative(num) (*num == '-' ? 1: 0)
 #define isPositive(num) (*num == '+' ? 1: 0)
@@ -26,9 +31,9 @@
 
 void numToMemAdd(char* dstNum, int srcNum, int len);
 int binaryToOctal(char* binaryNumStr);
-void createEntryExternFiles(SymbolTable *symbTable, char *inFileName);
+void createEntryExternFiles(SymbTable *symbTable, char *inFileName);
 void createOutputFiles(InstructImg *instructImg, char *inFileName, int dc);
-void freeMem(SymbolTable *symbTable, InstructImg* instructImg, DataImg* dataImg, ParsedFile* pf);
+void freeMem(SymbTable *symbTable, InstructImg* instructImg, DataImg* dataImg, ParsedFile* pf);
 /*
 	Add the file extension to the file name.
 	@param char* dst - The file name with the extension name.
@@ -48,22 +53,22 @@ void trimwhitespace(char *ln);
 	is represented by a string.
 
 	@param char* binaryDst - The converted string in binary (an empty value)
-	@param char* decSrc - The string to convert
-	@param char* negative - A flag representing if the number id negative or not. 0 = False, 1 = True. 
-	@param char* len - number of BITs in the binary number, each BIT will represented by one char
+	@param int decSrc - The string to convert
+	@param int negative - A flag representing if the number id negative or not. 0 = False, 1 = True. 
+	@param int len - number of BITs in the binary number, each BIT will represented by one char
 */
-void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, bool negative, int len);
+void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, int negative, int len);
 
 /*
 	convert a decimal number which is represented by a string to binary number which 
 	is represented by a string.
 
 	@param char* binary - The converted string in binary
-	@param char* num - The string to convert
-	@param char* negative - A flag representing if the number id negative or not. 0 = False, 1 = True. 
-	@param char* len - number of BITs in the binary number, each BIT will represented by one char
+	@param int num - The string to convert
+	@param int negative - A flag representing if the number id negative or not. 0 = False, 1 = True. 
+	@param int len - number of BITs in the binary number, each BIT will represented by one char
 */
-void convertNumToBinaryStr(char* binary, int num, bool negative, int len);
+void convertNumToBinaryStr(char* binary, int num, int negative, int len);
 
 /* 
     Get the binary character for a number with a given mask.
@@ -72,7 +77,7 @@ void convertNumToBinaryStr(char* binary, int num, bool negative, int len);
     @param int value - The original value, in it's absolute value, and +1 if previously negative
     @param int isNegative - Negativity flag
 */
-char getBinaryChar(int mask, int value, bool isNegative);
+char getBinaryChar(int mask, int value, int isNegative);
 
 /*
 	Check if the given string is a valid number.  

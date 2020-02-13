@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
 		if (!parsingError)
 		{
 			createOutputFiles(instructImg, inFileName, dc);
+			createEntryExternFiles(symbTable, inFileName);
 		}
 		freeMem(symbTable, instructImg, dataImg, pf);
 		printf("The file: %s\n has compiled successfully", argv[i]);

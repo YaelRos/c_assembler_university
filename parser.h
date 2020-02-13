@@ -1,22 +1,33 @@
+#include "utils.h" 
+
 #define ONE_ADDITIONAL_LINE 1
 #define TWO_ADDITIONAL_LINE 2
 #define NO_ADDITIONAL_LINE 0
 #define EMPTY_BMC "000000000000000"
-#define A "100"
-#define R "010"
-#define E "001"
-#define ENTRY "entry"
-#define EXTERN "extern"
-#define DATA "data"
-#define STRING "string"
-#define ENTRY_LEN 5
-#define EXTERN_LEN 6
-#define STR_LEN 6
-#define DATA_LEN 4
+
+OpCode opCodesMatch[NUM_OF_INSTRUCTION] = {
+	{"mov", MOV, TWO_OPERANDS},
+    {"cmp", CMP, TWO_OPERANDS},
+    {"add", ADD, TWO_OPERANDS},
+    {"sub", SUB, TWO_OPERANDS},
+    {"lea", LEA, TWO_OPERANDS},
+    {"clr", CLR, ONE_OPERAND},
+    {"not", NOT, ONE_OPERAND},
+    {"inc", INC, ONE_OPERAND},
+    {"dec", DEC, ONE_OPERAND},
+    {"jmp", JMP, ONE_OPERAND},
+    {"bne", BNE, ONE_OPERAND},
+    {"red", RED, ONE_OPERAND},
+    {"prn", PRN, ONE_OPERAND},
+    {"jsr", JSR, ONE_OPERAND},
+    {"rts", RTS, NO_OPERANDS},
+    {"stop", STOP, NO_OPERANDS}
+};
 
 void setStorageEntryOrExtern(ParsedLineNode * line);
-bool isDirect(operand, SymbTable *symbTable);
-AddressingMethod getAddressindMethod(char* operand, SymbTable *symbTable);
+int isDirect(char* operand, SymbTable *symbTable);
+int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTable);
+void setSymbFromExternEntry(ParsedLineNode* line, int etLen);
 
 /*
 	Check if there is a symbol definition at the beginning of the line.
@@ -100,7 +111,7 @@ void getFirstOperand(ParsedLineNode* line, SymbTable *symbTable);
 	@param SymbTable* symbTable - The symbol table
 	@return AddressingMethod - Integer which represent the addressing method code
 */
-AddressingMethod getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable);
+int getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable);
 
 /*
 	Get the destination operand and save it in the InstructionStruct object.

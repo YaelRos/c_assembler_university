@@ -1,52 +1,51 @@
-#include <string.h>
-#include "utils.h"
+#include "parser.h"
+#include "utils.h" 
+#include "dataStruct.h"
 
-#define isImmediate(operand) (operand[0] == '#' ? true: false)
-#define isIndirectReg(operand) (((operand[0] == '*') && (operand[1] == 'r')) ? true: false) //can add check for valid register
-#define isDirectReg(operand) ((operand[0] == 'r') ? true: false)
+#define isImmediate(operand) (operand[0] == '#' ? 1: 0)
+#define isIndirectReg(operand) (((operand[0] == '*') && (operand[1] == 'r')) ? 1: 0) 
+#define isDirectReg(operand) ((operand[0] == 'r') ? 1: 0)
+/*
+	get the line length and return the smallest value between the line length and the given max length of line.
+*/
+#define lenOfLine(len) (len = (len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len))
 
-static OpCode opCodesMatch[NUM_OF_INSTRUCTION] = {
-	{"mov", MOV, TWO_OPERANDS},
-    {"cmp", CMP, TWO_OPERANDS},
-    {"add", ADD, TWO_OPERANDS},
-    {"sub", SUB, TWO_OPERANDS},
-    {"lea", LEA, TWO_OPERANDS},
-    {"clr", CLR, ONE_OPERAND},
-    {"not", NOT, ONE_OPERAND},
-    {"inc", INC, ONE_OPERAND},
-    {"dec", DEC, ONE_OPERAND},
-    {"jmp", JMP, ONE_OPERAND},
-    {"bne", BNE, ONE_OPERAND},
-    {"red", RED, ONE_OPERAND},
-    {"prn", PRN, ONE_OPERAND},
-    {"jsr", JSR, ONE_OPERAND},
-    {"rts", RTS, NO_OPERANDS},
-    {"stop", STOP, NO_OPERANDS}
+
+void setSymbFromExternEntry(ParsedLineNode* line, int etLen)
+{
+	line->ln = line->ln + etLen;
+	trimwhitespace(line->ln);
+	strcpy(line->typeHandle.et.labelName, line->ln);
 }
 
-
+/*
 void setStorageEntryOrExtern(ParsedLineNode * line) 
 {	
-	if(strncmp(line->line, ENTRY, ENTRY_LEN) == 0)
+	if(strncmp(line->ln, ENTRY, ENTRY_LEN) == 0)
 	{
 		line->lineType = ENTRY_TYPE;
-		setSymbFromExternEntry(symbNode, line->line, ENTRY_LEN)
+		setSymbFromExternEntry(symbNode, line->ln, ENTRY_LEN);
 	}
-	else if(strncmp(line->line, EXTERN, EXTERN_LEN) == 0)
+	else if(strncmp(line->ln, EXTERN, EXTERN_LEN) == 0)
 	{
 		line->lineType = EXTERN_TYPE;
-		setSymbFromExternEntry(symbNode, line->line, EXTERN_LEN)
+		setSymbFromExternEntry(symbNode, line->ln, EXTERNAL_TYPE);
 	}
 }
+*/
 
-
-bool isDirect(operand, SymbTable *symbTable)
+int isDirect(char* operand, SymbTable *symbTable)
 {
 	SymbNode *tmp;
-	tmp = (SymbNodes*)malloc(sizeof(SymbNodes))
-	tmp = symbTable->head;
 	struct externNode exNode; 
-	for (int i = 0; i < symbTable->counter; i++)
+	int i;
+	if ((tmp = (SymbNode*)malloc(sizeof(SymbNode))) == NULL)
+	{
+		printMemEllocateError();
+		exit(1);
+	}
+	tmp = symbTable->head;
+	for (i = 0; i < symbTable->counter; i++)
 	{
 		if(strcmp(operand, tmp->symbName))
 		{
@@ -56,14 +55,14 @@ bool isDirect(operand, SymbTable *symbTable)
 		{
 			exNode.memAddr = tmp->symbAddr;
 			strcpy(exNode.SymbName, operand);
-			symbTable->exTable[symbTable->exTable->counter++] = exNode;
-			return true;
+			symbTable->exTable.externalLabel[symbTable->exTable.counter++] = exNode;
+			return 1;
 		}
 	}
-	return false;
+	return 0;
 }
 
-AddressingMethod getAddressindMethod(char* operand, SymbTable *symbTable)
+int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTable)
 {
 	if(isImmediate(operand))
 	{
@@ -83,17 +82,21 @@ AddressingMethod getAddressindMethod(char* operand, SymbTable *symbTable)
 	}
 	else
 	{
-		printError(NON_EXSIT_ADDRESSING_METHOD);
+		line->error = NON_EXSIT_ADDRESSING_METHOD;
+		return NO_ADD_METHOD;
 	}
 }
 
 
 void validateStringType(ParsedLineNode* line, char * string)
 {
-	//check for  ""
-	//MISS_PARAM_ERROR check for an empty data
-	//EXTRA_TEXT_ERROR
+	/*check for  ""
+	MISS_PARAM_ERROR check for an empty data
+	EXTRA_TEXT_ERROR
+	*/
 }
+
+/*
 
 void validateDataType(ParsedLineNode* line, char* data)
 {	
@@ -128,7 +131,8 @@ void validateDataType(ParsedLineNode* line, char* data)
     {
     	if (*validData == ',') 
     	{
-            if (commaFlag || (!isspace(*(validData-1)) && !isdigit(*(validData-1)))) { /* Check if consecutive commas, or if neighbours aren't a digit or a space*/
+            if (commaFlag || (!isspace(*(validData-1)) && !isdigit(*(validData-1)))) { 
+             // Check if consecutive commas, or if neighbours aren't a digit or a space
                 pr->errorType = ILLEGAL_COMMA_IN_DATA_DECLARATION;
                 return;
             }
@@ -137,7 +141,7 @@ void validateDataType(ParsedLineNode* line, char* data)
         } 
         else if ((*rawData == '-'  || *rawData == '+' )) 
         {
-            if (isdigit(*(rawData-1)) || !isdigit(*(rawData+1)) || positivitySignFlag) { /* After a sign we must see a number, and we can't have multiple signs for a number*/
+            if (isdigit(*(rawData-1)) || !isdigit(*(rawData+1)) || positivitySignFlag) {  After a sign we must see a number, and we can't have multiple signs for a number
                 pr->errorType = ILLEGAL_POSITIVITY_SIGN_IN_DATA_DECLARATION;
                 return;
             }
@@ -168,31 +172,32 @@ void validateDataType(ParsedLineNode* line, char* data)
         return;
     }
 
-	//MULTI_CONSEC_COMMAS_ERROR
-	/* After a sign we must see a number, and we can't have multiple signs for a number*/
-	//MISS_PARAM_ERROR
-	//MISS_COMMA_ERROR
-	//EXTRA_TEXT_ERROR
-	//SET_MEM_NOT_INT_ERROR
+	MULTI_CONSEC_COMMAS_ERROR
+	 After a sign we must see a number, and we can't have multiple signs for a number
+	MISS_PARAM_ERROR
+	MISS_COMMA_ERROR
+	EXTRA_TEXT_ERROR
+	SET_MEM_NOT_INT_ERROR
 }
+*/
 
 void getSecOperand(ParsedLineNode *line, SymbTable *symbTable)
 {
-	AddressingMethod am;
-	char* operand;
-	am = getOperand(line->line, operand, symbTable);
+	int am;
+	char* operand = NULL;
+	am = getOperand(line, operand, symbTable);
 	if (*line->ln != '\0' || *line->ln != '\n')
 	{
 		line->error = EXTRA_TEXT_ERROR;
 		return;
 	}
-	strcpy(line->typeHandle.opDst, operand)
-	line->typeHandle.opDstMethod = am
+	strcpy(line->typeHandle.instruct.opDst, operand);
+	line->typeHandle.instruct.opDstMethod = am;
 }
 
-AddressingMethod getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable)
+int getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable)
 {
-	AddressingMethod am;
+	int am;
 	int i = 0;
 	operand = (char*)malloc(LABEL_MAX_LEN* sizeof(char));
 	trimwhitespace(line->ln);
@@ -206,26 +211,26 @@ AddressingMethod getOperand(ParsedLineNode* line, char* operand, SymbTable *symb
 		line->error = MISS_PARAM_ERROR;
 		return NO_ADD_METHOD;
 	}
-	while(!isspace(line[i]) && line[i] != ',' && line[i] != '\0' && line[i] != '\n')
+	while(!isspace(line->ln[i]) && line->ln[i] != ',' && line->ln[i] != '\0' && line->ln[i] != '\n')
 	{
-		operand[i] = line[i];
+		operand[i] = line->ln[i];
 		i++;
 	}
 	operand[i] = '\0';
 
-	line = line+i-1;
-	am = getAddressindMethod(operand, symbTable);
+	line->ln = line->ln+i-1;
+	am = getAddressindMethod(line, operand, symbTable);
 	return am;
 }
 
 void getFirstOperand(ParsedLineNode* line, SymbTable *symbTable)
 {
-	AddressingMethod am;
-	char* operand;
+	int am;
+	char* operand = NULL;
 	
 	am = getOperand(line, operand, symbTable);
-	strcpy(line->typeHandle.opSrc, operand);
-	line->typeHandle->instruct.opSrcMethod = am;
+	strcpy(line->typeHandle.instruct.opSrc, operand);
+	line->typeHandle.instruct.opSrcMethod = am;
 	trimwhitespace(line->ln);
 	if (*line->ln != ',') 	/* remove , between first and second operand */
 	{
@@ -260,48 +265,52 @@ void getInstrucName(ParsedLineNode* line)
 	}
 	else
 	{
-		line->typeHandle = opCodesMatch[i].opCodeNum;
+		line->typeHandle.instruct.opCode = opCodesMatch[i].opCodeNum;
 	}
 }
 
 void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 {
-	char *dec, *binary;
+	char *dec, *binary = NULL;
 	int negative = 0;
 	char comma[2] = ",";
-
+	if((dec = (char *) malloc(sizeof(char)))==NULL)
+	{
+		printMemEllocateError();
+		exit(1);
+	}
 	strcpy(dec, line->ln);
-	validateDataType(dec);
+	/* validateDataType(dec); */
 	strtok(dec, comma);
 	while (dec != NULL)
 	{
 		trimwhitespace(dec);
 
-		if ((negative = isNegative(dec)) | isPositive(dec))
+		if ((negative = isNegative(dec)) || isPositive(dec))
 		{
 			dec++;
 		}
-		convertDecToBinaryStr(binary, dec, negative, MAX_WORD_LENGTH+1)
+		convertDecStrToBinaryStr(binary, dec, negative, MAX_WORD_LENGTH+1);
 		addNumToDataImg(binary, dataImg);
-		dec = strtok(NULL, comma)
+		dec = strtok(NULL, comma);
 	}
 }
 
 
 void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 {
-	int len;
+	int len, i;
 	char c;
-	char* binary;
-	validateStringType(line->ln);
+	char* binary = NULL;
+	/* validateStringType(line->ln); */
 	trimwhitespace(line->ln);
 	len = strlen(line->ln);
 	lenOfLine(len);
 
-	for (int i = 0; i < len; i++)
+	for (i = 0; i < len; i++)
 	{
 		c = line->ln[i];
-		convertNumToBinaryStr(binary, int(c), false, MAX_WORD_LENGTH)
+		convertNumToBinaryStr(binary, c - '0', 0, MAX_WORD_LENGTH);
 		addNumToDataImg(binary, dataImg);
 	}
 }
@@ -310,11 +319,11 @@ void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 int isDataStorage(ParsedLineNode * line) 
 {
 	int isData, isStr;
-	if (((isData=strncmp(line->line, DATA, DATA_LEN)) == 0) | 
-		((isStr= strncmp(line->line, STRING, STRING_LEN)) == 0))
+	if (((isData=strncmp(line->ln, DATA, DATA_LEN)) == 0) | 
+		((isStr= strncmp(line->ln, STRING, STR_LEN)) == 0))
 	{
 		line->lineType = DATA_TYPE;
-		line->typeHandle->dataType = (isData == 0 ? DOT_DATA_TYPE : DOT_STRING_TYPE);
+		line->typeHandle.dataType = (isData == 0 ? DOT_DATA_TYPE : DOT_STRING_TYPE);
 		return 1;
 	}
 	return 0;
@@ -327,11 +336,8 @@ int isGuidanceType(ParsedLineNode* line)
 	if (*(line->ln) == '.')
 	{
 		line->ln++;
-		if(isDataStorage(line))
-		else
-		{
+		if(!isDataStorage(line))
 			setStorageEntryOrExtern(line);
-		}
 		return 1;
 	}
 	else
@@ -345,8 +351,8 @@ int isGuidanceType(ParsedLineNode* line)
 void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 {
 	char* label;
-	label = strchr(line->ln ,":");
-	if ((strlen(line)-strlen(label)) > LABEL_MAX_LEN) /*max label size is 31*/
+	label = strchr(line->ln ,':');
+	if ((strlen(line->ln)-strlen(label)) > LABEL_MAX_LEN) /*max label size is 31*/
 	{
 		line->error = LABEL_EXCEEDED_MAX_LEN_ERROR;
 	} 
@@ -377,5 +383,5 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 
 int isFirstFieldSymb(char* ln)
 {
-	return (strchr(ln ,":") != NULL)
+	return (strchr(ln ,':') != NULL);
 }

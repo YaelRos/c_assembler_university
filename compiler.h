@@ -1,7 +1,4 @@
-#include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
-// #include <ctype.h>
+#include "dataStruct.h"
 
 #define OPCODE_LEN_BITS 4
 #define REG_METHOD_LEN_BITS 4
@@ -88,12 +85,12 @@ void buildBinaryCodeFirstLn(ParsedLineNode* line, InstructImg* instructImg);
    	Add the relevant BITs of the addressing method of the operand to the first row
    	of the binary code. 
 
-	@param AddressingMethod opMet - The addressing method of the operand. 
-	@param InstructionNode *in - The first instruction row of the current line. 
+	@param int opMet - The addressing method of the operand. 
+	@param struct instructNode *in - The first instruction row of the current line. 
 	@param int place - Represent the pleace which need to insert the instrction to. 
 	@return int - the next place to insert the additional binaary code. 
 */
-int addRegMethodToFirstLn(AddressingMethod opMet, InstructionNode *in, int place);
+int addRegMethodToFirstLn(int opMet, struct instructNode *in, int place);
 
 /*
    	Calculate the binary code of the additional rows of the instruction. 
@@ -107,26 +104,26 @@ void buildBinaryCodeNextLn(ParsedLineNode *line, InstructImg* instructImg);
    	Add the relevant BITs of the addressing method of the operand to the additional row
    	of the binary code. 
 
-	@param AddressingMethod opMet - The addressing method of the operand. 
+	@param int opMet - The addressing method of the operand. 
 	@param int place - Represent the pleace which need to insert the instrction to. 
-	@param InstructionNode *in - Th instruction row.
+	@param struct instructNode *in - Th instruction row.
 	@param ParsedLineNode *line - The object of the current line.
 	@param InstructImg* instructImg - The instruction image.
 	@return int - the next place to insert the additional binaary code. 
 */
-void addRegMethodToLn(AddressingMethod opMethod, int place, InstructionNode *in, 
+void addRegMethodToLn(int opMethod, int place, struct instructNode *in, 
 	ParsedLineNode *line, InstructImg* instructImg);
 
 /*
    	Add BITs of an addressing method of an operand to a binary code.
 
 	@param char* p - The opernd.
-	@param bool isNegative - A flag representing if the symbol is negative or not. 0 = False, 1 = True
+	@param int isNegative - A flag representing if the symbol is negative or not. 0 = False, 1 = True
 	@param int len - num of BITs
 	@param int place - Represent the pleace which need to insert the instrction to. 
-	@param InstructionNode *in - The instruction row.
+	@param struct instructNode *in - The instruction row.
 */
-void addRegToMem(char *p, bool isNegative, int len, int place, InstructionNode *in);
+void addRegToMem(char *p, int isNegative, int len, int place, struct instructNode *in);
 
 /*
     Second iteration of the Assembler, parse the rest of the file and complit the convertion 
@@ -141,7 +138,7 @@ void addRegToMem(char *p, bool isNegative, int len, int place, InstructionNode *
     @return int - The Error Num we found, if there is no error so it will be 0
 */
 int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable,
- char *fileName, parsedFile *parsedFile);
+ char *fileName, ParsedFile *parsedFile);
 
 /*
     Run the second iteration algorithem (Lines 4-8 in the mmn page 33)
