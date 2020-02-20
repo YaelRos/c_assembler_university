@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "utils.h"
 #include "compiler.h"
 
 int main(int argc, char *argv[]) 
@@ -8,26 +7,27 @@ int main(int argc, char *argv[])
 	DataImg dataImg;
 	SymbTable symbTable;
 	ParsedFile pf;
+	int i,parsingError;
 
-	if (argc == 1) //check for file input
+	if (argc == 1) /* check for file input */
 	{
 		printMisinFileError();
 		return 1;
 	}
-	for (int i = 0; i < argc; ++i)
+	for (i = 1; i < argc; i++)
 	{		
 		initDataImg(&dataImg);
 		initSymbTable(&symbTable);
 		initParsedFile(&pf);
+		printf("%s %d\n", argv[i], i);
+		parsingError = excute(argv[i], &instructImg, &dataImg, &symbTable, &pf);
 
-		parsingError = excute(argv[i], instructImg, dataImg, symbTable, pf);
-
-		if (!parsingError)
+		if (parsingError)
 		{
-			createOutputFiles(instructImg, inFileName, dc);
-			createEntryExternFiles(symbTable, inFileName);
+			createOutputFiles(&instructImg, argv[i], dataImg.dc);
+			createEntryExternFiles(&symbTable, argv[i]);
 		}
-		freeMem(symbTable, instructImg, dataImg, pf);
+		freeMem(&symbTable, &instructImg, &dataImg, &pf);
 		printf("The file: %s\n has compiled successfully", argv[i]);
 	}
 }

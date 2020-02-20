@@ -1,3 +1,7 @@
+#ifndef PARSER_H
+#define PARSER_H
+
+#include "error.h"
 #include "utils.h" 
 
 #define ONE_ADDITIONAL_LINE 1
@@ -5,27 +9,11 @@
 #define NO_ADDITIONAL_LINE 0
 #define EMPTY_BMC "000000000000000"
 
-OpCode opCodesMatch[NUM_OF_INSTRUCTION] = {
-	{"mov", MOV, TWO_OPERANDS},
-    {"cmp", CMP, TWO_OPERANDS},
-    {"add", ADD, TWO_OPERANDS},
-    {"sub", SUB, TWO_OPERANDS},
-    {"lea", LEA, TWO_OPERANDS},
-    {"clr", CLR, ONE_OPERAND},
-    {"not", NOT, ONE_OPERAND},
-    {"inc", INC, ONE_OPERAND},
-    {"dec", DEC, ONE_OPERAND},
-    {"jmp", JMP, ONE_OPERAND},
-    {"bne", BNE, ONE_OPERAND},
-    {"red", RED, ONE_OPERAND},
-    {"prn", PRN, ONE_OPERAND},
-    {"jsr", JSR, ONE_OPERAND},
-    {"rts", RTS, NO_OPERANDS},
-    {"stop", STOP, NO_OPERANDS}
-};
+
+extern OpCode opCodesMatch[NUM_OF_INSTRUCTION];
 
 void setStorageEntryOrExtern(ParsedLineNode * line);
-int isDirect(char* operand, SymbTable *symbTable);
+void updateExTable(int memadd, char* operand, SymbTable *symbTable);
 int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTable);
 void setSymbFromExternEntry(ParsedLineNode* line, int etLen);
 
@@ -45,15 +33,6 @@ int isFirstFieldSymb(char* ln);
 	@param SymbTable* symbTable - The symbol table
 */
 void validateSymb(ParsedLineNode* line, SymbTable * symbTable);
-
-/*
-	Set the symbol value in the line object to be 
-	the symbol which defined at the beginning of the line,
-	and move the string pointer forward as the length of the symbol value.
-	@param ParsedLineNode* line - The object of the current line. 
-	@param char* label - The substring of line->ln which start at the end of the label.
-*/
-void setSymbValue(ParsedLineNode* line, char* label);
 
 /*
 	Check if the line is guidance line.
@@ -120,3 +99,5 @@ int getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable);
 	@param SymbTable* symbTable - The symbol table
 */
 void getSecOperand(ParsedLineNode *line, SymbTable *symbTable);
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef ERROR_H
+#define ERROR_H
+#include <stdlib.h>
 #include <stdio.h>
 #define ERROR "ERROR: "
 #define LABEL_BEFORE_EXTERN "Warning: There's a label at the beginning of the extern line"
@@ -31,6 +34,8 @@ enum ERRORS
 	MISS_COMMA_ERROR,
 	EXTRA_TEXT_ERROR,
 	LABEL_NOT_IN_SYMB_TABLE,
-	NON_EXSIT_ADDRESSING_METHOD
+	NON_EXSIT_ADDRESSING_METHOD,
+	NOT_AN_ALPHA_ERROR
 };
 
+#endif

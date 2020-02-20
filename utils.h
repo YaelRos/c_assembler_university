@@ -1,3 +1,6 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <ctype.h>
 #include <math.h>
 #include "dataStruct.h"
@@ -45,8 +48,9 @@ void appendExtensionToFilename(char* dst, char* src, char* extension);
 /* 
 	Remove white space from the beginning and the end of the line.
 	@param char* line - The current read line from the file 
+	@return char* - the line after removing scpaces.
 */
-void trimwhitespace(char *ln);
+char* trimwhitespace(char *ln);
 
 /*
 	convert a decimal number which is represented by a string to binary number which 
@@ -90,3 +94,12 @@ int isValidNumber(char * c);
 	@return int - A flag representing if the string is equal to saved word. 0 = False, 1 = True
 */
 int isSavedWord(char* sy);
+
+/* reverse characters in s */
+void reverse(char s[]);
+
+/* convert n to characters in s */
+void itoa(int n, char s[]);
+
+
+#endif

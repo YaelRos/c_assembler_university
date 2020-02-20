@@ -1,5 +1,5 @@
-compiler: dataStruct.o utils.o parser.o error.o compiler.o main.o
-	gcc -g dataStruct.o utils.o parser.o error.o compiler.o main.o -o compiler
+assembler: dataStruct.o utils.o parser.o error.o compiler.o main.o
+	gcc -g dataStruct.o utils.o parser.o error.o compiler.o main.o -o assembler
 main.o: main.c compiler.h utils.h
 	gcc -c main.c -o main.o -Wall -ansi -pedantic
 compiler.o: compiler.c compiler.h dataStruct.h utils.h error.h

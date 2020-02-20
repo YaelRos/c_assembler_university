@@ -1,6 +1,10 @@
+#ifndef DATA_STRUCT_H
+#define DATA_STRUCT_H
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "error.h"
 
 #define LABEL_MAX_LEN 31
 #define FIRST_ADDRES 100
@@ -48,7 +52,6 @@ typedef struct dataNode {
 
 typedef struct dataImg {
 	DataImgNode* head;
-	DataImgNode* tail;
 	int dc;
 } DataImg;
 
@@ -56,7 +59,7 @@ struct instructNode {
 	char instruction[MAX_WORD_LENGTH+1];
 };
 
-typedef struct instructImg {
+typedef struct {
 	struct instructNode instructions[MEM_SIZE];
 	int ic;
 } InstructImg;
@@ -66,7 +69,7 @@ struct externNode {
 	int memAddr;
 };
 
-typedef struct externTable {
+typedef struct {
 	struct externNode *externalLabel;
 	int counter;
 } ExternTable;
@@ -76,11 +79,11 @@ typedef struct symbNode {
 	int symbAddr;
 	int symbType;
 	struct symbNode *next;
+	struct symbNode *prev;
 } SymbNode;
 
-typedef struct symbTable {
+typedef struct {
 	SymbNode *head;
-	SymbNode *tail;
 	ExternTable exTable;
 	int counter;
 } SymbTable;
@@ -100,13 +103,13 @@ enum ADDRESSING_METHOD
 };
 
 
-typedef enum DOT_DATA_TYPE 
+enum DOT_DATA_TYPE 
 {
 	DOT_DATA_TYPE,
 	DOT_STRING_TYPE
-} DotDataTypes;
+};
 
-typedef struct opCode
+typedef struct 
 {
 	char* opCodeName;
 	int opCodeNum;
@@ -140,7 +143,7 @@ enum INSTRUCTIONS
 	STOP
 };
 
-typedef struct instructionStruct
+typedef struct
 {
 	int opCode;
 	char opSrc[LABEL_MAX_LEN];
@@ -157,17 +160,17 @@ typedef struct parsedLine {
 	char* symbValue;
 	int lineType;
 	union {
-		DotDataTypes dataType;
+		int dataType;
 		InstructionStruct instruct;
 		struct EterenEntryType et;
 	} typeHandle;
 	struct parsedLine *next;
+	struct parsedLine *prev;
 } ParsedLineNode;
 
-typedef struct parsedFile 
+typedef struct 
 {
 	struct parsedLine* head;
-	struct parsedLine* tail;
 	char * filename;
 	int error;
 	int count;
@@ -179,20 +182,19 @@ void initParsedFile(ParsedFile *pf);
 
 void initSymbTable(SymbTable *symbTable);
 
-void initExTable(ExternTable *exTable);
+ExternTable* initExTable(ExternTable *exTable);
 
-void initPardedLineNode(ParsedLineNode* line, char* ln);
+ParsedLineNode* initPardedLineNode(ParsedLineNode* line);
 
 /*
 	Get the symbol node from the symbol table that has the same name like the labelName.
 
     @param SymbTable* symbTable - The symbol table
 	@param char* labelName - The symbol value to b compered.
-	@param SymbNode *tmp - The symbol node.
 	@return SymbNode* - the symbol node from the symbol table that has the same name like the labelName,
 	if there's not such a node, return NULL.
 */
-SymbNode* getSymbFeature(SymbTable *symbTable, char* labelName, SymbNode *tmp);
+SymbNode* getSymbFeature(SymbTable *symbTable, char* labelName);
 
 /*
 	Add 100+IC to all the address of symbols from type DATA.
@@ -224,20 +226,21 @@ void addNumToDataImg(char* binaryStr, DataImg *dataImg);
     If the record already exists in our symbol table, return 1.
     @param SymbNode* symbNode - An empty symbol node 
     @param SymbTable* symbTable - The symbol table
-    @return int - A flag representing if the symbol already exists in our symbol table. 0 = False, 1 = True
+    @return SymbNode* - A flag representing if the symbol already exists in our symbol table. NULL = False
 */
-int addValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode);
+SymbNode* addValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode);
 
 /*
 	initialize nre symbol node
 	@param char* name - The name of the symbol
 	@param DataImg* dataImg - The data image
     @param InstructImg* instructImg - The instruction image
+    @param SymbTable* symbTable - The symbol table
     @param SymbNode* symbNode - An empty symbol node 
     @param int feature - The feature of the symbol
 */
-void initSymbNode(char* name, DataImg *dataImg, 
-	InstructImg *instructImg,SymbNode* symbNode, int feature);
+SymbNode* initSymbNode(char* name, DataImg *dataImg, 
+	InstructImg *instructImg, SymbTable* symbTable, SymbNode* symbNode, int feature);
 
 /*
 	Check if the symbol table contains the symbol value sy
@@ -255,4 +258,6 @@ int symbTableContains(char* sy, SymbTable *symbTable);
 	@param char* label - The substring of line->ln which start at the end of the label.
 */
 void setSymbValue(ParsedLineNode* line, char* label);
+
+#endif
 

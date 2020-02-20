@@ -1,5 +1,4 @@
 #include "dataStruct.h"
-#include "error.h"
 
 void initDataImg(DataImg* dataImg)
 {
@@ -9,7 +8,6 @@ void initDataImg(DataImg* dataImg)
 		exit(1);
 	}
 	dataImg->head = NULL;
-	dataImg->tail = NULL;
 	dataImg->dc = 0;
 }
 
@@ -18,10 +16,8 @@ void initParsedFile(ParsedFile *pf)
 	if ((pf = (ParsedFile*)malloc(sizeof(ParsedFile))) == NULL)
 	{
 		printMemEllocateError();
-		exit(1);
 	}
 	pf->head = NULL;
-	pf->tail = NULL;
 	pf->count = 0;
 	pf->error = 0;
 }
@@ -32,50 +28,64 @@ void initSymbTable(SymbTable *symbTable)
 	if ((symbTable = (SymbTable*)malloc(sizeof(SymbTable))) == NULL)
 	{
 		printMemEllocateError();
-		exit(1);
 	}
-	initExTable(exTable);
-	symbTable->head = NULL;
-	symbTable->tail = NULL;
+	if ((symbTable->head = (SymbNode*)malloc(sizeof(SymbNode))) == NULL)
+	{
+		printMemEllocateError();
+	}
+	exTable = initExTable(exTable);
 	symbTable->counter = 0;
 }
 
-void initExTable(ExternTable *exTable)
+ExternTable* initExTable(ExternTable *exTable)
 {
 	if ((exTable = (ExternTable*)malloc(sizeof(ExternTable))) == NULL)
 	{
 		printMemEllocateError();
-		exit(1);
 	}
 	exTable->counter =0;
+	return exTable;
 }
 
-void initPardedLineNode(ParsedLineNode* line, char* ln)
+ParsedLineNode* initPardedLineNode(ParsedLineNode* line)
 {
-	if ((line = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL)
+	printf("%s\n", "initPardedLineNode");
+	if  ((line = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL)
 	{
 		printMemEllocateError();
-		exit(1);
 	}
-	strcpy(line->ln,ln);
+	if((line->ln = (char*)malloc(sizeof(char)*MAX_LINE_LENGTH)) == NULL)
+	{
+		printMemEllocateError();
+	}
+	if((line->symbValue = (char*)malloc(sizeof(char))) == NULL)
+	{
+		printMemEllocateError();
+	}
 	line->error = NO_ERROR;
+	line->next = NULL;
+	printf("%s\n", "Finish to initPardedLineNode");
+	return line;
 }
 
-SymbNode* getSymbFeature(SymbTable *symbTable, char* labelName, SymbNode *tmp)
+SymbNode* getSymbFeature(SymbTable *symbTable, char* labelName)
 {
-	if((tmp = (SymbNode*)malloc(sizeof(SymbNode))) == NULL)
-	{
-		printMemEllocateError();
-		exit(0);
-	}
+	SymbNode* tmp;
 	tmp = symbTable->head;
-	while (tmp!=NULL)
+	printf("getSymbFeature: %s\n", symbTable->head->symbName);
+	if ((strcmp(tmp->symbName,labelName)) == 0)
+		return tmp;
+	tmp = tmp->next;
+	printf("getSymbFeature tmp: %s\n", tmp->symbName);
+	while (tmp != (symbTable->head))
 	{
-		if (strcmp(tmp->symbName,labelName) == 0)
+		printf("getSymbFeature tmp: %s\n", tmp->symbName);
+		if ((strcmp(tmp->symbName,labelName)) == 0)
 			return tmp;
 		tmp= tmp->next;
 	}
-	return NULL;
+	printf("getSymbFeature tmp: %s\n", "here1");
+	return tmp;
 }
 
 void updateValuesInSymbTable(SymbTable *symbTable, int ic)
@@ -83,83 +93,117 @@ void updateValuesInSymbTable(SymbTable *symbTable, int ic)
 	SymbNode *tmp;
 
 	tmp = symbTable->head;
-	while (tmp != NULL)
+	printf("updateValuesInSymbTable - type: %d\n", tmp->symbType);
+	printf("updateValuesInSymbTable - tmp: %s\n", tmp->symbName);
+	if (tmp->symbType == DATA_TYPE)
 	{
+		printf("updateValuesInSymbTable - %s\n", "if");
+		tmp->symbAddr = tmp->symbAddr+ic+FIRST_ADDRES;
+	}
+	printf("updateValuesInSymbTable - %s\n", "here1");
+	tmp = tmp->next;
+	printf("updateValuesInSymbTable - tmp: %s\n", tmp->symbName);
+	while (tmp != symbTable->head)
+	{
+		printf("updateValuesInSymbTable - %d\n", tmp->symbType);
 		if (tmp->symbType == DATA_TYPE)
 		{
-			tmp->symbAddr = tmp->symbAddr +ic+FIRST_ADDRES;
+			printf("updateValuesInSymbTable - %s\n", "if");
+			tmp->symbAddr = tmp->symbAddr+ic+FIRST_ADDRES;
 		}
+		printf("updateValuesInSymbTable - %s\n", "here1");
 		tmp = tmp->next;
 	}
+	printf("updateValuesInSymbTable - tmp: %s\n", tmp->symbName);
 }
 
-void addLineToParsedFile(ParsedLineNode *line, ParsedFile *parsedFile, int count)
+void addLineToParsedFile(ParsedLineNode *line, ParsedFile *pf, int count)
 {	
-	parsedFile->count = count;
+	pf->count = count;
 
-	if (!parsedFile->error)
+	if (line->error)
 	{
-		parsedFile->error = 1;
+		pf->error = 1;
 	}
 	if (count == 1)
 	{
-		parsedFile->head = line;
-		parsedFile->tail = line;
+		pf->head = line;
 	}
 	else
 	{
-		parsedFile->tail->next = line;
+		line->next = pf->head;
+		line->prev = pf->head->prev;
 	}
+	pf->head->prev = line;
 }
 
 void addNumToDataImg(char* binaryStr, DataImg *dataImg)
 {
-	DataImgNode *tmp;
-	tmp = (DataImgNode*)malloc(sizeof(DataImgNode));
+	DataImgNode *new, *tmp;
+	new = (DataImgNode*)malloc(sizeof(DataImgNode));
 
-	strcpy(tmp->binaryData, binaryStr);
-	tmp->next = NULL;
+	memcpy(new->binaryData, binaryStr, MAX_WORD_LENGTH+1);
+	new->next = NULL;
 
 	if (dataImg->dc == FIRST_ADDRES)
 	{
-		dataImg->head = tmp;
-		dataImg->tail = tmp;
+		printf("addNumToDataImg - %s\n", "new");
+		dataImg->head = new;
 	}
 	else
 	{
-		dataImg->tail->next = tmp;
+		tmp = dataImg->head;
+		while (tmp != NULL)
+			tmp = tmp->next;
+		tmp = new;
+		printf("addNumToDataImg - %s\n", "add");
+
 	}
 	dataImg->dc++;
 }
 
-int addValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode)
+SymbNode* addValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode)
 {
-	if (symbTable->head == NULL)
+	int i;
+	SymbNode* tmp = NULL;
+	symbNode->next = symbTable->head;
+	printf("addValuesInSymbTable - counter:%d\n", symbTable->counter);
+	if (symbTable->counter == 0)
 	{
-		symbTable->counter = 1;
+		printf("addValuesInSymbTable - %s\n", "NULL");
 		symbTable->head = symbNode;
-		symbTable->tail = symbNode;
+		
 	}
-	else 
+	else
 	{
-		if(!symbTableContains(symbNode->symbName, symbTable))
-		{
-			symbTable->tail->next = symbNode;
-			symbTable->counter++;
-			return 0;
-		}
-		else
-		{
-			return 1;
-		}
+		symbNode->prev = symbTable->head->prev;
+		printf("addValuesInSymbTable - add:%s\n", symbNode->symbName);
+		printf("addValuesInSymbTable - head:%d\n", symbNode->symbType);
 	}
-	return 0;
+	symbTable->head->prev = symbNode;
+	symbTable->counter++;
+	tmp = symbTable->head;
+	for (i = 0; i < symbTable->counter; ++i, tmp=tmp->next)
+	{
+		printf("addValuesInSymbTable - name:%s\n", tmp->symbName);
+
+	}
+	return symbNode;
 }
 
-void initSymbNode(char* name, DataImg *dataImg, 
-	InstructImg *instructImg,SymbNode* symbNode, int feature)
+SymbNode* initSymbNode(char* name, DataImg *dataImg, 
+	InstructImg *instructImg, SymbTable* symbTable, SymbNode* symbNode, int feature)
 {	
-	strcpy(symbNode->symbName,name);
+	int i;
+	SymbNode* tmp = NULL;
+	if((symbNode = (SymbNode*) malloc (sizeof(SymbNode))) == NULL)
+	{
+		printMemEllocateError();
+	}
+	if(((symbNode->symbName) = (char*) malloc(sizeof(char)* LABEL_MAX_LEN)) == NULL)
+		printMemEllocateError();
+	strcpy(symbNode->symbName, name);
+	printf("initSymbNode - symbName:%s\n", symbNode->symbName);
 	symbNode->symbType = feature;
 
 	switch (feature)
@@ -169,19 +213,49 @@ void initSymbNode(char* name, DataImg *dataImg,
 		case EXTERNAL_TYPE: symbNode->symbAddr = 0; break;
 		default: break;
 	}
+	symbNode->next = symbTable->head;
+	printf("addValuesInSymbTable - counter:%d\n", symbTable->counter);
+	if (symbTable->counter == 0)
+	{
+		printf("addValuesInSymbTable - %s\n", "NULL");
+		symbTable->head = symbNode;
+	}
+	else
+	{
+		symbNode->prev = symbTable->head->prev;
+		printf("addValuesInSymbTable - add:%s\n", symbNode->symbName);
+		printf("addValuesInSymbTable - head:%d\n", symbNode->symbType);
+	}
+	symbTable->head->prev = symbNode;
+	symbTable->counter++;
+	tmp = symbTable->head;
+	for (i = 0; i < symbTable->counter; ++i, tmp=tmp->next)
+	{
+		printf("addValuesInSymbTable - name:%s\n", tmp->symbName);
+
+	}
+	return symbNode;
+
+	// return addValuesInSymbTable(symbTable, symbNode);
 }
 
 int symbTableContains(char* sy, SymbTable *symbTable)
 {
-	SymbNode *tmp = NULL;
-	return (getSymbFeature(symbTable, sy, tmp) != NULL);
+	printf("symbTableContains - : %s\n", "here1");
+	if (symbTable->head)
+	{
+		printf("symbTableContains - symbTable->head: %s\n", symbTable->head->symbName);
+		if (getSymbFeature(symbTable, sy))
+			return 1;	
+	}
+	return 0;
 }
 
-void setSymbValue(ParsedLineNode* line, char* label)
-{
-	int lenLabel;
-	lenLabel = strlen(line->ln)- strlen(label);
-	memcpy(line->symbValue,line->ln, lenLabel);
-	line->ln = line->ln + lenLabel;
-}
+// void setSymbValue(ParsedLineNode* line, char* label)
+// {
+// 	int lenLabel;
+// 	lenLabel = strlen(line->ln)- strlen(label);
+// 	memcpy(line->symbValue,line->ln, lenLabel);
+// 	line->ln = line->ln + lenLabel;
+// }
 

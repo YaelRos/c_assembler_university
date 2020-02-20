@@ -1,12 +1,10 @@
-#include "dataStruct.h"
+#ifndef COMPILER_H
+#define COMPILER_H
 
-#define OPCODE_LEN_BITS 4
-#define REG_METHOD_LEN_BITS 4
-#define ARE_LEN_BITS 3
-#define IMM_VAL_LEN_BITS 12
-#define REG_VAL_BITS 3
-#define REG_PRIOR_BITS 6
-#define NUM_OF_DATA_GUIDANCE 2
+/*#include "dataStruct.h"
+#include "error.h"*/
+#include "parser.h"
+
 
 /*
     Run the first and second iteration, and return an indication whether we failed or succeeded
@@ -17,7 +15,7 @@
     @param ParsedFile* pf - Linked list of the rows in the file
     @return int - The Error Num we found, if there is no error so it will be 0
 */
-int ecxcute(char* fileName, InstructImg* instructImg,
+int excute(char* fileName, InstructImg* instructImg,
 	DataImg* dataImg,SymbTable* symbTable,ParsedFile* pf);
 
 /*
@@ -111,7 +109,7 @@ void buildBinaryCodeNextLn(ParsedLineNode *line, InstructImg* instructImg);
 	@param InstructImg* instructImg - The instruction image.
 	@return int - the next place to insert the additional binaary code. 
 */
-void addRegMethodToLn(int opMethod, int place, struct instructNode *in, 
+void addRegMethodToLn(char* op, int opMethod, int place, struct instructNode *in, 
 	ParsedLineNode *line, InstructImg* instructImg);
 
 /*
@@ -171,3 +169,6 @@ void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg,
 */
 void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg, 
 	SymbTable *symbTable);
+
+#endif
+

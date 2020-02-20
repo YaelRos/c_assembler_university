@@ -1,6 +1,5 @@
 #include "parser.h"
-#include "utils.h" 
-#include "dataStruct.h"
+
 
 #define isImmediate(operand) (operand[0] == '#' ? 1: 0)
 #define isIndirectReg(operand) (((operand[0] == '*') && (operand[1] == 'r')) ? 1: 0) 
@@ -8,42 +7,55 @@
 /*
 	get the line length and return the smallest value between the line length and the given max length of line.
 */
-#define lenOfLine(len) (len = (len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len))
+#define lenOfLine(len) (len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len)
 
+OpCode opCodesMatch[NUM_OF_INSTRUCTION] = {
+	{"mov", MOV, TWO_OPERANDS},
+    {"cmp", CMP, TWO_OPERANDS},
+    {"add", ADD, TWO_OPERANDS},
+    {"sub", SUB, TWO_OPERANDS},
+    {"lea", LEA, TWO_OPERANDS},
+    {"clr", CLR, ONE_OPERAND},
+    {"not", NOT, ONE_OPERAND},
+    {"inc", INC, ONE_OPERAND},
+    {"dec", DEC, ONE_OPERAND},
+    {"jmp", JMP, ONE_OPERAND},
+    {"bne", BNE, ONE_OPERAND},
+    {"red", RED, ONE_OPERAND},
+    {"prn", PRN, ONE_OPERAND},
+    {"jsr", JSR, ONE_OPERAND},
+    {"rts", RTS, NO_OPERANDS},
+    {"stop", STOP, NO_OPERANDS}
+};
 
 void setSymbFromExternEntry(ParsedLineNode* line, int etLen)
 {
 	line->ln = line->ln + etLen;
-	trimwhitespace(line->ln);
+	line->ln = trimwhitespace(line->ln);
 	strcpy(line->typeHandle.et.labelName, line->ln);
 }
 
-/*
-void setStorageEntryOrExtern(ParsedLineNode * line) 
+void setStorageEntryOrExtern(ParsedLineNode* line) 
 {	
 	if(strncmp(line->ln, ENTRY, ENTRY_LEN) == 0)
 	{
 		line->lineType = ENTRY_TYPE;
-		setSymbFromExternEntry(symbNode, line->ln, ENTRY_LEN);
+		setSymbFromExternEntry(line, ENTRY_LEN);
 	}
 	else if(strncmp(line->ln, EXTERN, EXTERN_LEN) == 0)
 	{
-		line->lineType = EXTERN_TYPE;
-		setSymbFromExternEntry(symbNode, line->ln, EXTERNAL_TYPE);
+		line->lineType = EXTERNAL_TYPE;
+		setSymbFromExternEntry(line, EXTERNAL_TYPE);
 	}
 }
-*/
 
-int isDirect(char* operand, SymbTable *symbTable)
+
+void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 {
+	int i;
 	SymbNode *tmp;
 	struct externNode exNode; 
-	int i;
-	if ((tmp = (SymbNode*)malloc(sizeof(SymbNode))) == NULL)
-	{
-		printMemEllocateError();
-		exit(1);
-	}
+
 	tmp = symbTable->head;
 	for (i = 0; i < symbTable->counter; i++)
 	{
@@ -53,24 +65,23 @@ int isDirect(char* operand, SymbTable *symbTable)
 		}
 		else
 		{
-			exNode.memAddr = tmp->symbAddr;
-			strcpy(exNode.SymbName, operand);
-			symbTable->exTable.externalLabel[symbTable->exTable.counter++] = exNode;
-			return 1;
+			/* if a label came from extern source than add the instruction line address to the exTable */
+			if(tmp->symbType == EXTERNAL_TYPE)
+			{
+				exNode.memAddr = mamadd;
+				strcpy(exNode.SymbName, operand);
+				symbTable->exTable.externalLabel[symbTable->exTable.counter++] = exNode;
+			}
 		}
 	}
-	return 0;
 }
 
 int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTable)
 {
+	printf("getAddressindMethod - isImmediate: %c\n", operand[0]);
 	if(isImmediate(operand))
 	{
 		return IMMEDIATE;
-	}
-	else if (isDirect(operand, symbTable))
-	{
-		return 	DIRECT;
 	}
 	else if (isIndirectReg(operand))
 	{
@@ -82,9 +93,9 @@ int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTabl
 	}
 	else
 	{
-		line->error = NON_EXSIT_ADDRESSING_METHOD;
-		return NO_ADD_METHOD;
+		return DIRECT;
 	}
+	
 }
 
 
@@ -184,23 +195,26 @@ void validateDataType(ParsedLineNode* line, char* data)
 void getSecOperand(ParsedLineNode *line, SymbTable *symbTable)
 {
 	int am;
-	char* operand = NULL;
+	char* operand;
+	if((operand = (char*)malloc(sizeof(char)))== NULL)
+		printMemEllocateError();
 	am = getOperand(line, operand, symbTable);
-	if (*line->ln != '\0' || *line->ln != '\n')
+	line->ln = trimwhitespace(line->ln);
+	if (*(line->ln) != '\0' && *(line->ln) != '\n')
 	{
 		line->error = EXTRA_TEXT_ERROR;
 		return;
 	}
 	strcpy(line->typeHandle.instruct.opDst, operand);
 	line->typeHandle.instruct.opDstMethod = am;
+	printf("getSecOperand - opDstMethod:%d\n", line->typeHandle.instruct.opDstMethod);
 }
 
 int getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable)
 {
 	int am;
 	int i = 0;
-	operand = (char*)malloc(LABEL_MAX_LEN* sizeof(char));
-	trimwhitespace(line->ln);
+	line->ln = trimwhitespace(line->ln);
 	if (*line->ln == '\0' || *line->ln == '\n')
 	{
 		line->error = NO_OPERANDS_ERROR;
@@ -217,8 +231,8 @@ int getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable)
 		i++;
 	}
 	operand[i] = '\0';
-
-	line->ln = line->ln+i-1;
+	line->ln = line->ln+i;
+	printf("getOperand - line->ln: %s\n", line->ln);
 	am = getAddressindMethod(line, operand, symbTable);
 	return am;
 }
@@ -226,18 +240,24 @@ int getOperand(ParsedLineNode* line, char* operand, SymbTable *symbTable)
 void getFirstOperand(ParsedLineNode* line, SymbTable *symbTable)
 {
 	int am;
-	char* operand = NULL;
-	
+	char* operand;
+	if((operand = (char*) malloc (sizeof(char))) == NULL)
+	{
+		printMemEllocateError();
+	}
 	am = getOperand(line, operand, symbTable);
 	strcpy(line->typeHandle.instruct.opSrc, operand);
+	printf("getFirstOperand - opsrc: %s\n", line->typeHandle.instruct.opSrc);
+
 	line->typeHandle.instruct.opSrcMethod = am;
-	trimwhitespace(line->ln);
+	line->ln = trimwhitespace(line->ln);
 	if (*line->ln != ',') 	/* remove , between first and second operand */
 	{
 		line->error = MISS_COMMA_ERROR;
 		return;
 	}
 	line->ln++;
+	printf("getFirstOperand- line->ln: %s\n", line->ln);
 	getSecOperand(line, symbTable);
 }
 
@@ -245,20 +265,22 @@ void getInstrucName(ParsedLineNode* line)
 {
 	int i = 0;
 	char instruc[MAX_LENTH_OF_INSTRUCT+1];
-	trimwhitespace(line->ln);
-	while(!isspace(line->ln[i]))
+	printf("getInstrucName - line:%s\n", line->ln);
+	while(!isspace(line->ln[i]) && line->ln[i])
 	{
 		instruc[i] = line->ln[i];
 		i++;
 	}
 	instruc[i] = '\0';
-
+	printf("getInstrucName - instruc:%s\n", instruc);
+	line->ln = (line->ln)+i+1;
+	printf("getInstrucName - line: %s\n", line->ln);
 	i = 0;
 	while (i<NUM_OF_INSTRUCTION && strcmp(instruc, opCodesMatch[i].opCodeName))
 	{
 		i++;
 	}
-	line->ln = (line->ln)+i;
+	line->typeHandle.instruct.opCode = opCodesMatch[i].opCodeNum;
 	if (i == NUM_OF_INSTRUCTION)
 	{
 		line->error= INSTRUCTION_DOES_NOT_EXIST_ERROR;
@@ -275,22 +297,26 @@ void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 	int negative = 0;
 	char comma[2] = ",";
 	if((dec = (char *) malloc(sizeof(char)))==NULL)
-	{
 		printMemEllocateError();
-		exit(1);
-	}
 	strcpy(dec, line->ln);
 	/* validateDataType(dec); */
 	strtok(dec, comma);
+	printf("parseDataType - dec: %s\n", dec);
 	while (dec != NULL)
 	{
-		trimwhitespace(dec);
+		dec = trimwhitespace(dec);
 
 		if ((negative = isNegative(dec)) || isPositive(dec))
 		{
 			dec++;
 		}
-		convertDecStrToBinaryStr(binary, dec, negative, MAX_WORD_LENGTH+1);
+		if((binary = (char *) malloc(sizeof(char)))==NULL)
+		{
+			printMemEllocateError();
+		}
+		printf("parseDataType - dec1: %s\n", dec);
+		convertDecStrToBinaryStr(binary, dec, negative, MAX_WORD_LENGTH);
+		printf("parseDataType - binary: %s\n", binary);
 		addNumToDataImg(binary, dataImg);
 		dec = strtok(NULL, comma);
 	}
@@ -299,19 +325,38 @@ void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 
 void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 {
-	int len, i;
+	int len;
 	char c;
 	char* binary = NULL;
+	
+	printf("parseStringType - %s\n", "here");
+	line->ln = trimwhitespace(line->ln);
 	/* validateStringType(line->ln); */
-	trimwhitespace(line->ln);
-	len = strlen(line->ln);
-	lenOfLine(len);
+	line->ln++; //remove after validate it here becuase of the "
 
-	for (i = 0; i < len; i++)
+	len = strlen(line->ln);
+	*(line->ln+len-1) = '\0'; //remove after validate it here becuase of the "
+	len= lenOfLine(len);
+	printf("parseStringType - len:%d\n", len);
+	c = *(line->ln);
+	while (c)
 	{
-		c = line->ln[i];
-		convertNumToBinaryStr(binary, c - '0', 0, MAX_WORD_LENGTH);
-		addNumToDataImg(binary, dataImg);
+		if(isalpha(c))
+		{
+			if((binary = (char *) malloc(sizeof(char)))==NULL)
+			{
+				printMemEllocateError();
+			}
+			convertNumToBinaryStr(binary, c, 0, MAX_WORD_LENGTH);
+			printf("parseStringType - convert:%s\n", binary);
+			addNumToDataImg(binary, dataImg);
+		}
+		else 
+		{
+			line->error = NOT_AN_ALPHA_ERROR;
+			return;
+		}
+		c= *(line->ln++);
 	}
 }
 
@@ -324,6 +369,7 @@ int isDataStorage(ParsedLineNode * line)
 	{
 		line->lineType = DATA_TYPE;
 		line->typeHandle.dataType = (isData == 0 ? DOT_DATA_TYPE : DOT_STRING_TYPE);
+		line->ln = line->ln+(isData == 0 ? DATA_LEN : STR_LEN);
 		return 1;
 	}
 	return 0;
@@ -332,7 +378,7 @@ int isDataStorage(ParsedLineNode * line)
 
 int isGuidanceType(ParsedLineNode* line)
 {
-	trimwhitespace(line->ln);
+	line->ln = trimwhitespace(line->ln);
 	if (*(line->ln) == '.')
 	{
 		line->ln++;
@@ -350,22 +396,37 @@ int isGuidanceType(ParsedLineNode* line)
 
 void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 {
-	char* label;
+	char* label, tmp[LABEL_MAX_LEN];
+	int len, i=0;
+	if((label = (char*) malloc (sizeof(char)*LABEL_MAX_LEN)) == NULL)
+	{
+		printMemEllocateError();
+	}
+
 	label = strchr(line->ln ,':');
-	if ((strlen(line->ln)-strlen(label)) > LABEL_MAX_LEN) /*max label size is 31*/
+	len = (strlen(line->ln)-strlen(label));
+	memcpy(tmp, line->ln, len);
+	tmp[len] = '\0';
+	printf("validateSymb - tmp:%s\n", tmp);
+
+	line->ln = line->ln+len+1; /* 1- for excluding ':' from ln */
+	printf("validateSymb - line->ln:%s\n", line->ln);
+	if (len > LABEL_MAX_LEN) /*max label size is 31*/
 	{
 		line->error = LABEL_EXCEEDED_MAX_LEN_ERROR;
 	} 
-	else if(!isalpha(*(line->ln))) /*first char of label is alphabetic*/
+	else if(!isalpha(tmp[i])) /*first char of label is alphabetic*/
 	{
 		line->error = LABEL_START_ERROR;
 	}
 	else
 	{
-		setSymbValue(line, label);
-		strcpy(label, line->symbValue);
-		while(isalnum(*label)) label++; /* all the chars of the label are alphabetic or numeric */
-		if (label != '\0')
+		memcpy(line->symbValue, tmp, len+1); /* +1 for including '\0' */
+		printf("validateSymb - line->symbValue:%s\n", line->symbValue);
+
+		while(isalnum(tmp[i])) i++; /* all the chars of the label are alphabetic or numeric */
+
+		if (tmp[i] != '\0')
 		{
 			line->error = ILLIGALE_CHAR_ERROR;
 		}
@@ -383,5 +444,7 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 
 int isFirstFieldSymb(char* ln)
 {
-	return (strchr(ln ,':') != NULL);
+	char *tmp;
+	tmp = strchr(ln ,':');
+	return (tmp != NULL);
 }

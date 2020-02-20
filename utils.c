@@ -143,7 +143,7 @@ void numToMemAdd(char* dstNum, int srcNum, int len)
 		i++;
 		dstNum++;
 	}
-	itoa(dstNum, srcNum,len-i-1);
+	itoa(srcNum, dstNum);
 	*(dstNum+len) = '\0';
 }
 
@@ -168,21 +168,22 @@ void appendExtensionToFilename(char* dst, char* src, char* extension)
 	strcat(dst, extension);
 }
 
-void trimwhitespace(char *ln)
+char* trimwhitespace(char *ln)
 {
 	char *end;
-	
+	printf("trimwhitespace before:%s\n", ln);
 	while(isspace(*ln)) ln++; /* Trim leading space */
-
-	if(*ln == 0)
+	if(*ln == '\0')
 	{
-		return;
+		return ln;
 	}
 	/* Trim trailing space */
 	end = ln + strlen(ln) - 1;
 	while(end > ln && isspace(*end)) end--;
 
 	end[1] = '\0'; /* Write new null terminator character */
+	printf("trimwhitespace after:%s\n", ln);
+	return ln;
 }
 
 void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, int negative, int len)
@@ -191,12 +192,10 @@ void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, int negative, int l
 	if (isValidNumber(decSrc))
 	{
 		num = atoi(decSrc);
-		if (negative) /* Handle negative numbers - For two's compliment we need to flip the number and add +1. We'll add before flipping since it makes it easier (And the results are the same!) */
-		{ 
-			num += 1;
-			num *= -1;
-		}
+		if (negative)  //Handle negative numbers - For two's compliment we need to flip the number and add +1. We'll add before flipping since it makes it easier (And the results are the same!) 
+			num -= 1;
 		convertNumToBinaryStr(binaryDst, num, negative, len);
+		printf("convertDecStrToBinaryStr - %d\n", num);
 	}
 }
 
@@ -204,6 +203,7 @@ void convertNumToBinaryStr(char* binaryDst, int num, int negative, int len)
 {
 	int mask;
 	mask = 1 << (len-1);
+	printf("convertNumToBinaryStr: num:%d\n", num);
 	while (mask) 
 	{
 		*binaryDst = getBinaryChar(mask, num, negative);
@@ -250,12 +250,40 @@ int isValidNumber(char * c)
 	return 1; 
 }
 
+void itoa(int n, char s[])
+{
+	int i, sign;
+
+	if((sign =n) < 0) /* record sign */
+		n = -n;
+	i=0;
+	do {	/* generate digits in reverse order */
+		s[i++] = n % 10 + '0'; /* get next digit */
+	} while ((n /= 10) > 0);	/* delete it */
+	if (sign < 0)
+		s[i++] = '-';
+	s[i] = '\0';
+	reverse(s);
+}
+
+void reverse(char s[])
+{
+	int c, i, j;
+	for (i = 0, j = strlen(s)-1; i<j; i++, j--)
+	{
+		c = s[i];
+		s[i] = s[j];
+		s[j] = c;
+	}
+}
+
 int isSavedWord(char* sy) 
 {
 	int i;
 	char* savedWord[NUM_OF_SAVED_WORD] = {ENTRY, EXTERN, DATA, STRING, R1, R2, R3, R4, R5, R6, R7, 
 		"mov", "cmp", "add", "sub", "lea", "clr", "not", "inc", "dec", "jmp", "bne",
 		"red", "prn", "jsr", "rts", "stop"};
+	printf("isSavedWord - %s\n", "here");
 	for (i = 0; i < NUM_OF_SAVED_WORD; i++)
 	{
 		if (strcmp(savedWord[i], sy) == 0)

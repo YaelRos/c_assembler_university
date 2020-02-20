@@ -13,6 +13,7 @@ void printFetchFileError(char* inFileName)
 void printMemEllocateError()
 {
 	printf("%s%s\n", ERROR, OUT_OF_MEM);
+	exit(1);
 }
 
 void printError(int error, char* fileName, int numOfRow)
@@ -37,7 +38,7 @@ void printError(int error, char* fileName, int numOfRow)
 		case ILL_DATA_TYPE_ERROR:
 			printf("Data declaration type doesn't exist\n");break;
 	}
-	
+
 	/* MISS_PARAM_ERROR,
 		INSTRUCTION_DOES_NOT_EXIST_ERROR,
 		UNEXPECTED_RESULT,
