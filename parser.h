@@ -12,8 +12,7 @@
 
 extern OpCode opCodesMatch[NUM_OF_INSTRUCTION];
 
-void setStorageEntryOrExtern(ParsedLineNode * line);
-void updateExTable(int memadd, char* operand, SymbTable *symbTable);
+int setStorageEntryOrExtern(ParsedLineNode * line);
 int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTable);
 void setSymbFromExternEntry(ParsedLineNode* line, int etLen);
 

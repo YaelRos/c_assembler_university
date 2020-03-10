@@ -1,23 +1,54 @@
 #include "utils.h"
 
-void createOutputFiles(InstructImg *instructImg, char *inFileName, int dc)
+
+static const ConvertBinToOct binaryToOctalMap[BIN_TO_OCT_THREE] = { 
+    {"000", '0'},
+    {"001", '1'},
+    {"010", '2'},
+    {"011", '3'},
+    {"100", '4'},
+    {"101", '5'},
+    {"110", '6'},
+    {"111", '7'}    
+};
+
+
+void createOutputFiles(InstructImg *instructImg, char *inFileName, DataImg* dataImg)
 {
-	int i, keywordInOct;
-	char *memAdd;
+	int i;
+	char *memAdd = NULL, *keywordInOct = NULL;
 	char outFileName[MAX_LINE_LENGTH];
 	FILE *fp;
-	memAdd = (char*)malloc(sizeof(char)); 
+	DataImgNode *tmp;
+
 	appendExtensionToFilename(outFileName, inFileName, OBJ_EXTENSION);
+	printf("createOutputFiles - %s\n", outFileName);
 	fp = fopen(outFileName, "w");
-	fprintf(fp, "%d %d\n", instructImg->ic - dc, dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
+	fprintf(fp, "%d %d\n", instructImg->ic-100, dataImg->dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
 
 	/* Write every row in Octal */
-	for (i = 0; i < instructImg->ic; i++) 
+	for (i = 0; i < instructImg->ic -100; i++) 
 	{
-		keywordInOct = binaryToOctal(instructImg->instructions[i].instruction);
-		numToMemAdd(memAdd, FIRST_ADDRES+i, DEC_MEM_ADD_SIZE+1);
-		fprintf(fp, "%s %d\n", memAdd ,keywordInOct);
+		printf("createOutputFiles - binary%s\n", instructImg->instructions[i].instruction);
+		keywordInOct = binaryToOctal(keywordInOct, instructImg->instructions[i].instruction);
+		memAdd = numToMemAdd(memAdd, FIRST_ADDRES+i, DEC_MEM_ADD_SIZE+1);
+		fprintf(fp, "%s %s\n", memAdd ,keywordInOct);
+	} 
+	printf("createOutputFiles - dataImg->binaryData:%s\n", dataImg->head->binaryData);
+ 	printf("createOutputFiles - dataImg->counter:%s\n", dataImg->head->next->binaryData);
+
+	tmp=dataImg->head;
+	while (tmp) 
+	{
+		printf("createOutputFiles - binary%s\n", tmp->binaryData);
+
+		keywordInOct = binaryToOctal(keywordInOct, tmp->binaryData);
+		memAdd = numToMemAdd(memAdd, FIRST_ADDRES+i, DEC_MEM_ADD_SIZE+1);
+		fprintf(fp, "%s %s\n", memAdd ,keywordInOct);
+		tmp= tmp->next;
+		i++;	
 	}    
+  
 
 	fclose(fp);
 }
@@ -30,6 +61,7 @@ void createEntryExternFiles(SymbTable *symbTable, char *inFileName)
 	int hasEnData = 0, hasExData = 0, i;
 	SymbNode *symbNode = symbTable->head;
 	char *memAdd = NULL;
+	ExternNode *tmpNode;
 
 	appendExtensionToFilename(enOutFileName, inFileName, EN_EXTENSION);
 	appendExtensionToFilename(exOutFileName, inFileName, EX_EXTENSION);
@@ -43,18 +75,24 @@ void createEntryExternFiles(SymbTable *symbTable, char *inFileName)
 				fpEn = fopen(enOutFileName, "w");
 				hasEnData = 1;
 			}
+			printf("%s %d\n", symbNode->symbName, symbNode->symbAddr);
 			fprintf(fpEn, "%s %d\n", symbNode->symbName, symbNode->symbAddr);
 		}
 	}
-	for (i = 0; i < symbTable->exTable.counter; i++)
+	printf("finish entry\n");
+
+	tmpNode = symbTable->exTable->head;
+	while (tmpNode)
 	{
 		if (!hasExData) 
 		{
 			fpEx = fopen(exOutFileName, "w");
 			hasExData = 1;
 		}
-		numToMemAdd(memAdd, symbTable->exTable.externalLabel[i].memAddr, DEC_MEM_ADD_SIZE+1);
-		fprintf(fpEx, "%s %s\n", symbTable->exTable.externalLabel[i].SymbName,memAdd);
+		printf("extern data - start, count:%d, memAdd:%d\n", i, tmpNode->memAddr);
+		memAdd = numToMemAdd(memAdd, tmpNode->memAddr, DEC_MEM_ADD_SIZE+1);
+		fprintf(fpEx, "%s %s\n", tmpNode->SymbName,memAdd);
+		tmpNode= tmpNode->next;
 	}
 	/* Close files */
 	if (hasEnData) 
@@ -70,10 +108,9 @@ void createEntryExternFiles(SymbTable *symbTable, char *inFileName)
 void freeMem(SymbTable *symbTable, InstructImg* instructImg, 
 	DataImg* dataImg, ParsedFile* pf) 
 {
-	int i;
 	SymbNode *symbNode;
 	DataImgNode *dataNode;
-	ParsedLineNode *pLine;
+	lineDFS *pLine;
 
 	while (symbTable->head != NULL) 
 	{
@@ -81,13 +118,15 @@ void freeMem(SymbTable *symbTable, InstructImg* instructImg,
 		symbTable->head = symbTable->head->next;
 		free(symbNode);
 	}
-
+	printf("freeMem - after symbTable\n");
 	while (dataImg->head != NULL) 
 	{
 		dataNode = dataImg->head;
 		dataImg->head = dataImg->head->next;
 		free(dataNode);
 	}
+	printf("freeMem - after dataImg\n");
+
 
 	while (pf->head != NULL) 
 	{
@@ -95,56 +134,48 @@ void freeMem(SymbTable *symbTable, InstructImg* instructImg,
 		pf->head = pf->head->next;
 		free(pLine);
 	}
+	printf("freeMem - after pf\n");
 
-	for (i = 0; i < instructImg->ic; i++) 
-	{
-		free(instructImg->instructions[i].instruction);
-	}
 }
 
-int binaryToOctal(char* binaryNumStr)
+char* binaryToOctal(char* octal, char* binaryNumStr)
 {
-    int octalnum = 0, decimalnum = 0, i = 0, num;
+	int i = 0,j = 0;
+    octal = (char*)malloc(sizeof(char));      
+    printf("binaryToOctal - binary: %s\n", binaryNumStr);
 
-	num = atoi(binaryNumStr);
-
-    /* This while loop converts binary number "num" to the
-     * decimal number "decimalnum"
-     */
-    while(num != 0)
-    {
-        decimalnum = decimalnum + (num%10) * pow(2,i);
-        i++;
-        num = num / 10;
-    }
-
-    i = 1;
-
-    /* This loop converts the decimal number "decimalnum" to the octal
-     * number "octalnum"
-     */
-    while (decimalnum != 0)
-    {
-        octalnum = octalnum + (decimalnum % 8) * i;
-        decimalnum = decimalnum / 8;
-        i = i * 10;
-    }
-
-    /* Returning the octal number that we got from binary number */
-    return octalnum;
+    while (j < OCT_KEYWORD_SIZE) 
+    { 
+        // one by one extract from left, substring 
+        // of size 3 and add its octal code 
+        while (strncmp(binaryNumStr, binaryToOctalMap[i].bin, BIN_TO_OCT_BITS))
+        {
+        	i++;
+        }
+        octal[j] = binaryToOctalMap[i].oct;
+        j++;
+        binaryNumStr += 3; 
+        i = 0;       
+    } 
+    octal[j] = '\0';
+    printf("binaryToOctal - octal: %s\n", octal);
+    return octal;     
 }
 
-void numToMemAdd(char* dstNum, int srcNum, int len)
+char* numToMemAdd(char* dstNum, int srcNum, int len)
 {
-	int i = 0;
+	dstNum= (char*)malloc(sizeof(char));
+	printf("numToMemAdd - srcNum: %d\n", srcNum);
 	if (srcNum<=MAX_NUM_WITH_3_DIGIT)
 	{
 		*dstNum = '0';
-		i++;
 		dstNum++;
 	}
 	itoa(srcNum, dstNum);
+	dstNum--;
 	*(dstNum+len) = '\0';
+	printf("numToMemAdd - dstNum: %s\n", dstNum);
+	return dstNum;
 }
 
 /*
@@ -186,22 +217,26 @@ char* trimwhitespace(char *ln)
 	return ln;
 }
 
-void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, int negative, int len)
+char* convertDecStrToBinaryStr(char* binaryDst, char* decSrc, int negative, int len)
 {
 	int num;
+
 	if (isValidNumber(decSrc))
 	{
 		num = atoi(decSrc);
 		if (negative)  //Handle negative numbers - For two's compliment we need to flip the number and add +1. We'll add before flipping since it makes it easier (And the results are the same!) 
 			num -= 1;
-		convertNumToBinaryStr(binaryDst, num, negative, len);
+		binaryDst = convertNumToBinaryStr(binaryDst, num, negative, len);
 		printf("convertDecStrToBinaryStr - %d\n", num);
+		return binaryDst;
 	}
+	return NULL;
 }
 
-void convertNumToBinaryStr(char* binaryDst, int num, int negative, int len)
+char* convertNumToBinaryStr(char* binaryDst, int num, int negative, int len)
 {
-	int mask;
+	int mask, i =0;
+	binaryDst = (char *) malloc(sizeof(char));
 	mask = 1 << (len-1);
 	printf("convertNumToBinaryStr: num:%d\n", num);
 	while (mask) 
@@ -209,8 +244,12 @@ void convertNumToBinaryStr(char* binaryDst, int num, int negative, int len)
 		*binaryDst = getBinaryChar(mask, num, negative);
 		binaryDst++;
 		mask >>= 1;
+		i++;
 	}
 	*(binaryDst) = '\0';
+	binaryDst-=i;
+	printf("convertNumToBinaryStr - %s\n", binaryDst);
+	return binaryDst;
 }
 
 

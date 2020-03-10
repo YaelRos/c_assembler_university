@@ -35,46 +35,25 @@ void setSymbFromExternEntry(ParsedLineNode* line, int etLen)
 	strcpy(line->typeHandle.et.labelName, line->ln);
 }
 
-void setStorageEntryOrExtern(ParsedLineNode* line) 
+int setStorageEntryOrExtern(ParsedLineNode* line) 
 {	
 	if(strncmp(line->ln, ENTRY, ENTRY_LEN) == 0)
 	{
 		line->lineType = ENTRY_TYPE;
 		setSymbFromExternEntry(line, ENTRY_LEN);
+		return ENTRY_TYPE; 
 	}
 	else if(strncmp(line->ln, EXTERN, EXTERN_LEN) == 0)
 	{
 		line->lineType = EXTERNAL_TYPE;
-		setSymbFromExternEntry(line, EXTERNAL_TYPE);
+		setSymbFromExternEntry(line, EXTERN_LEN);
+		return EXTERNAL_TYPE; 
 	}
+	line->error = ILLIGALE_LINE_TYPE;
+	return DATA_TYPE;
 }
 
 
-void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
-{
-	int i;
-	SymbNode *tmp;
-	struct externNode exNode; 
-
-	tmp = symbTable->head;
-	for (i = 0; i < symbTable->counter; i++)
-	{
-		if(strcmp(operand, tmp->symbName))
-		{
-			tmp = tmp->next;
-		}
-		else
-		{
-			/* if a label came from extern source than add the instruction line address to the exTable */
-			if(tmp->symbType == EXTERNAL_TYPE)
-			{
-				exNode.memAddr = mamadd;
-				strcpy(exNode.SymbName, operand);
-				symbTable->exTable.externalLabel[symbTable->exTable.counter++] = exNode;
-			}
-		}
-	}
-}
 
 int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTable)
 {
@@ -302,7 +281,7 @@ void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 	/* validateDataType(dec); */
 	strtok(dec, comma);
 	printf("parseDataType - dec: %s\n", dec);
-	while (dec != NULL)
+	while (dec)
 	{
 		dec = trimwhitespace(dec);
 
@@ -310,12 +289,8 @@ void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 		{
 			dec++;
 		}
-		if((binary = (char *) malloc(sizeof(char)))==NULL)
-		{
-			printMemEllocateError();
-		}
 		printf("parseDataType - dec1: %s\n", dec);
-		convertDecStrToBinaryStr(binary, dec, negative, MAX_WORD_LENGTH);
+		binary = convertDecStrToBinaryStr(binary, dec, negative, MAX_WORD_LENGTH);
 		printf("parseDataType - binary: %s\n", binary);
 		addNumToDataImg(binary, dataImg);
 		dec = strtok(NULL, comma);
@@ -328,26 +303,23 @@ void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 	int len;
 	char c;
 	char* binary = NULL;
-	
+	int firstData;
+
 	printf("parseStringType - %s\n", "here");
 	line->ln = trimwhitespace(line->ln);
 	/* validateStringType(line->ln); */
 	line->ln++; //remove after validate it here becuase of the "
-
 	len = strlen(line->ln);
 	*(line->ln+len-1) = '\0'; //remove after validate it here becuase of the "
 	len= lenOfLine(len);
 	printf("parseStringType - len:%d\n", len);
 	c = *(line->ln);
+	firstData = dataImg->dc == 0 ? 1:0;
 	while (c)
 	{
 		if(isalpha(c))
 		{
-			if((binary = (char *) malloc(sizeof(char)))==NULL)
-			{
-				printMemEllocateError();
-			}
-			convertNumToBinaryStr(binary, c, 0, MAX_WORD_LENGTH);
+			binary = convertNumToBinaryStr(binary, c, 0, MAX_WORD_LENGTH);
 			printf("parseStringType - convert:%s\n", binary);
 			addNumToDataImg(binary, dataImg);
 		}
@@ -358,13 +330,19 @@ void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 		}
 		c= *(line->ln++);
 	}
+	printf("parseStringType - convert:%s\n", EMPTY_BMC);
+	addNumToDataImg(EMPTY_BMC, dataImg); /* create an empty word in binary format and save it as an instruction. */
+	if (firstData)
+	{
+		dataImg->dc--;
+	}
 }
 
 
 int isDataStorage(ParsedLineNode * line) 
 {
 	int isData, isStr;
-	if (((isData=strncmp(line->ln, DATA, DATA_LEN)) == 0) | 
+	if (((isData=strncmp(line->ln, DATA, DATA_LEN)) == 0) || 
 		((isStr= strncmp(line->ln, STRING, STR_LEN)) == 0))
 	{
 		line->lineType = DATA_TYPE;
@@ -383,7 +361,7 @@ int isGuidanceType(ParsedLineNode* line)
 	{
 		line->ln++;
 		if(!isDataStorage(line))
-			setStorageEntryOrExtern(line);
+			line->lineType =setStorageEntryOrExtern(line);
 		return 1;
 	}
 	else
@@ -405,7 +383,7 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 
 	label = strchr(line->ln ,':');
 	len = (strlen(line->ln)-strlen(label));
-	memcpy(tmp, line->ln, len);
+	strncpy(tmp, line->ln, len);
 	tmp[len] = '\0';
 	printf("validateSymb - tmp:%s\n", tmp);
 
@@ -421,7 +399,7 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 	}
 	else
 	{
-		memcpy(line->symbValue, tmp, len+1); /* +1 for including '\0' */
+		strncpy(line->symbValue, tmp, len+1); /* +1 for including '\0' */
 		printf("validateSymb - line->symbValue:%s\n", line->symbValue);
 
 		while(isalnum(tmp[i])) i++; /* all the chars of the label are alphabetic or numeric */
@@ -430,10 +408,10 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 		{
 			line->error = ILLIGALE_CHAR_ERROR;
 		}
-		else if (symbTableContains(line->symbValue, symbTable)) /* each definition of label can appear one time */
-		{
-			line->error = DUP_LABEL_NAME_ERROR;
-		}
+		//else if (symbTableContains(line->symbValue, symbTable)) /* each definition of label can appear one time */
+		//{
+		//	line->error = DUP_LABEL_NAME_ERROR;
+		//}
 		else if (isSavedWord(line->symbValue)) /* label name can't be equal to a saved word in c language */
 		{
 			line->error = LABEL_EQUAL_TO_SAVED_WORD_ERROR;

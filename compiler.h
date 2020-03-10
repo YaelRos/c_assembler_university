@@ -164,10 +164,11 @@ void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg,
     and add it to the instruction row.
 
     @param ParsedLineNode *line - The object of the current line.
+    @param char* symbVal - The symbol that need to add his address
     @param InstructImg* instructImg - The instruction image
     @param SymbTable* symbTable - The symbol table
 */
-void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg, 
+void addDirectLabelToMem(ParsedLineNode* line, char* symbVal, InstructImg *instructImg, 
 	SymbTable *symbTable);
 
 #endif

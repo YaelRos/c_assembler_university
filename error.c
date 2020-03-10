@@ -37,6 +37,8 @@ void printError(int error, char* fileName, int numOfRow)
 			printf("Detected illegal comma in data declaration - must include numbers separated by a single comma\n");break;
 		case ILL_DATA_TYPE_ERROR:
 			printf("Data declaration type doesn't exist\n");break;
+        case ILLIGALE_LINE_TYPE:
+            printf("Detected illegal type of line, no: data or code\n");break;
 	}
 
 	/* MISS_PARAM_ERROR,

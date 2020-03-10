@@ -2,67 +2,116 @@
 
 /* extern OpCode opCodesMatch[]; */
 
-void addDirectLabelToMem(ParsedLineNode* line, InstructImg *instructImg, 
+void addDirectLabelToMem(ParsedLineNode* line, char* symbVal, InstructImg *instructImg, 
 	SymbTable *symbTable)
 {
 	SymbNode *symbNode = NULL;
-	struct instructNode *in = NULL;
+	struct instructNode *in;
 	char *dst = NULL; 
 
-	if((symbNode = getSymbFeature(symbTable, line->symbValue)) == NULL)
+	in = (struct instructNode*) malloc(sizeof(struct instructNode));
+	if ((in = (struct instructNode*) malloc(sizeof(struct instructNode))) ==NULL)
 	{
+		printMemEllocateError();
+	} 
+
+	if((symbNode = getSymbFeature(symbTable, symbVal)) == NULL) /* find the symbol definition */
+	{
+		printf("addDirectLabelToMem %s\n", "ERROR");
 		line->error = LABEL_NOT_IN_SYMB_TABLE;
 	}
 	else
 	{
 		/* add the converted (to binary) label address to the instruction row */
-		convertNumToBinaryStr(dst, symbNode->symbAddr, 0, IMM_VAL_LEN_BITS);
-		memcpy(in->instruction, dst, IMM_VAL_LEN_BITS);
-		instructImg->instructions[instructImg->ic++] = *(in); 
+		printf("buildBinaryCodeNextLn - symbNode->symbAddr: %d\n", symbNode->symbAddr);
+		dst = convertNumToBinaryStr(dst, symbNode->symbAddr, 0, IMM_VAL_LEN_BITS);
+		strncpy(in->instruction, dst, IMM_VAL_LEN_BITS);
 	}
+	/* add 3 last BITs */
 	if (symbNode->symbType == EXTERNAL_TYPE)
 	{
+		memcpy(in->instruction, EMPTY_BMC, MAX_WORD_LENGTH);
 		memcpy(in->instruction+IMM_VAL_LEN_BITS, E, ARE_LEN_BITS);
+		printf("buildBinaryCodeNextLn - 1 ->in: %s\n", in->instruction);
+		printf("buildBinaryCodeNextLn - add: %d\n", instructImg->ic);
+		strcpy(instructImg->instructions[instructImg->ic-100].instruction, in->instruction); /* addBinaryCodeToInstructImg */
+		printf("buildBinaryCodeNextLn - %s\n", instructImg->instructions[instructImg->ic].instruction);
+
 	}
 	else
 	{
 		memcpy(in->instruction+IMM_VAL_LEN_BITS, R, ARE_LEN_BITS);
+		printf("buildBinaryCodeNextLn - 1 ->in: %s\n", in->instruction);
+		printf("buildBinaryCodeNextLn - add: %d\n", instructImg->ic);
+		strcpy(instructImg->instructions[instructImg->ic-100].instruction, in->instruction); /* addBinaryCodeToInstructImg */
+		printf("buildBinaryCodeNextLn - %s\n", instructImg->instructions[instructImg->ic].instruction);
+
 	}
 }
 
 void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg, 
 	SymbTable *symbTable)
 {
-	instructImg->ic++; /* no need to change first line of instruction */
+	// instructImg->ic++; /* no need to change first line of instruction */
+	printf("updateBinaryMachineCode - start address: %d\n", instructImg->ic);
 
 	if (line->typeHandle.instruct.opSrcMethod != DIRECT &
 		line->typeHandle.instruct.opDstMethod != DIRECT ) /* not a direct addressing method though no need to change instructions */
 	{
-		instructImg->ic = (instructImg->ic) + line->typeHandle.instruct.addLine;
+		printf("updateBinaryMachineCode1: %s\n", "NOT DIRECT");
+		printf("updateBinaryMachineCode- addLine: %d\n", line->typeHandle.instruct.addLine);
+		instructImg->ic = instructImg->ic + line->typeHandle.instruct.addLine;
+		printf("updateBinaryMachineCode - address1: %d\n", instructImg->ic);
+
 	}
 	else if (line->typeHandle.instruct.opSrcMethod != DIRECT)
 	{
+		printf("updateBinaryMachineCode2: %s\n", "opDstMethod DIRECT");
+		instructImg->ic+= line->typeHandle.instruct.addLine;
+		printf("updateBinaryMachineCode- address2: %d\n", instructImg->ic);
+		printf("updateBinaryMachineCode3: %s\n", "updateExTable");
+		addDirectLabelToMem(line, line->typeHandle.instruct.opDst, instructImg, symbTable);
+		updateExTable(instructImg->ic, line->typeHandle.instruct.opDst, symbTable);
+		printf("updateBinaryMachineCode- addLine2: %d\n", line->typeHandle.instruct.addLine);
+
+	}
+	else if (line->typeHandle.instruct.opDstMethod != DIRECT)
+	{
+		printf("updateBinaryMachineCode2: %s\n", "opSrcMethod DIRECT");
+		printf("updateBinaryMachineCode3: %s\n", "updateExTable");
+		instructImg->ic++;
+		addDirectLabelToMem(line, line->typeHandle.instruct.opSrc, instructImg, symbTable);
 		updateExTable(instructImg->ic, line->typeHandle.instruct.opSrc, symbTable);
-		addDirectLabelToMem(line, instructImg, symbTable);
+		instructImg->ic++;
+		printf("updateBinaryMachineCode- address3: %d\n", instructImg->ic);
+
 	}
 	else 
 	{
+		printf("updateBinaryMachineCode5: %s\n", "opDstMethod + opSrcMethod + DIRECT");
+		printf("updateBinaryMachineCode6: %s\n", "opDstMethod + opSrcMethod + DIRECT");
+		instructImg->ic++;
+		addDirectLabelToMem(line, line->typeHandle.instruct.opSrc, instructImg, symbTable);
 		updateExTable(instructImg->ic, line->typeHandle.instruct.opSrc, symbTable);
-		addDirectLabelToMem(line, instructImg, symbTable);
+		instructImg->ic++;
+		addDirectLabelToMem(line, line->typeHandle.instruct.opDst, instructImg, symbTable);
 		updateExTable(instructImg->ic, line->typeHandle.instruct.opDst, symbTable);
-		addDirectLabelToMem(line, instructImg, symbTable);
+		printf("updateBinaryMachineCode7: %s\n", "opDstMethod + opSrcMethod + DIRECT");
 	}
+	instructImg->ic++;
+	printf("updateBinaryMachineCode- address finish: %d\n", instructImg->ic);
+
 }
 
 void addRegToMem(char *p, int isNegative, int len, int place, struct instructNode *in)
 {
-	char *dst = (char *) malloc(sizeof(char)); 
+	char* dst = NULL;
+	dst = convertDecStrToBinaryStr(dst, p, isNegative, len);;
 	printf("addRegToMem isNegative:%d\n", isNegative);
-	convertDecStrToBinaryStr(dst, p, isNegative, len);
 	printf("addRegToMem dst:%s\n", dst);
-	memcpy((in->instruction+place), dst, len);
+	strncpy(in->instruction+place, dst, len);
 	printf("addRegToMem in->instruction:%s\n", in->instruction);
-	memcpy((in->instruction+REG_PRIOR_BITS+(REG_VAL_BITS*2)), A, ARE_LEN_BITS);
+	strncpy((in->instruction+REG_PRIOR_BITS+(REG_VAL_BITS*2)), A, ARE_LEN_BITS);
 }
 
 void addRegMethodToLn(char* op, int opMethod, int place, struct instructNode *in, 
@@ -83,8 +132,7 @@ void addRegMethodToLn(char* op, int opMethod, int place, struct instructNode *in
 			if ((negative = isNegative(p)) || isPositive(p))
 				p++;
 			addRegToMem(p, negative, IMM_VAL_LEN_BITS, 0, in);break;
-		case DIRECT_REG: case INDIRECT_REG:
-		 addRegToMem(p, 0, REG_VAL_BITS, place, in); break;
+		case DIRECT_REG: case INDIRECT_REG:addRegToMem(p, 0, REG_VAL_BITS, place, in); break;
 		default: break;
 	}	
 	strcpy(instructImg->instructions[instructImg->ic].instruction, in->instruction); /* addBinaryCodeToInstructImg */
@@ -146,24 +194,29 @@ int addRegMethodToFirstLn(int opMet, struct instructNode *in, int place)
 void buildBinaryCodeFirstLn(ParsedLineNode* line, InstructImg* instructImg)
 {
 	struct instructNode* in;
-	char* binary;
+	char* binary = NULL;
 	int place = 0;
-	binary = (char*) malloc(sizeof(char));
-	if (((in = (struct instructNode*) malloc(sizeof(struct instructNode))) ==NULL)
-		|| (binary == NULL) )
+	if ((in = (struct instructNode*) malloc(sizeof(struct instructNode))) ==NULL)
 	{
 		printMemEllocateError();
 	}
-	convertNumToBinaryStr(binary, line->typeHandle.instruct.opCode, 0, OPCODE_LEN_BITS);
-	memcpy(in->instruction, binary, OPCODE_LEN_BITS); /* add opcode */
+
+	binary = convertNumToBinaryStr(binary, line->typeHandle.instruct.opCode, 0, OPCODE_LEN_BITS);
+	printf("buildBinaryCodeFirstLn - binary: %s\n", binary);
+	strncpy(in->instruction, binary, OPCODE_LEN_BITS); /* add opcode */
+	printf("buildBinaryCodeFirstLn1 - in->instruction: %s\n", in->instruction);
 
 	place = addRegMethodToFirstLn(line->typeHandle.instruct.opSrcMethod, in, OPCODE_LEN_BITS); /* add src reg method */
+	printf("buildBinaryCodeFirstLn2 - in->instruction: %s\n", in->instruction);
+
 	place = addRegMethodToFirstLn(line->typeHandle.instruct.opDstMethod, in, place); /* add dst reg method */
-	memcpy(in->instruction+place, A, ARE_LEN_BITS); /* add ARE bits */
+	printf("buildBinaryCodeFirstLn3 - in->instruction: %s\n", in->instruction);
+	strncpy(in->instruction+place, A, ARE_LEN_BITS); /* add ARE bits */
+	printf("buildBinaryCodeFirstLn4 - in->instruction: %s\n", in->instruction);
 
 	strcpy(instructImg->instructions[instructImg->ic].instruction, in->instruction); /* addBinaryCodeToInstructImg */
 	instructImg->instructions[instructImg->ic].instruction[MAX_WORD_LENGTH] = '\0';
-	printf("buildBinaryCodeFirstLn1 - in->instruction:%s\n", instructImg->instructions[instructImg->ic].instruction);
+	printf("buildBinaryCodeFirstLn5 - in->instruction:%s\n", instructImg->instructions[instructImg->ic].instruction);
 
 	instructImg->ic++;
 	buildBinaryCodeNextLn(line, instructImg);
@@ -220,12 +273,14 @@ void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instruc
 	{
 		printf("%s\n", LABEL_BEFORE_EXTERN);
 	}
-	symbNode = initSymbNode(line->typeHandle.et.labelName, dataImg, instructImg, symbTable, symbNode, EXTERNAL_TYPE);
+	initSymbNode(line->typeHandle.et.labelName, dataImg, instructImg, symbTable, EXTERNAL_TYPE);
 }
+
 
 void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg,
  SymbTable *symbTable)
 {
+	int res;
 	SymbNode *symbNode = NULL;
 	void (*parseDType[NUM_OF_DATA_GUIDANCE])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
 
@@ -246,9 +301,9 @@ void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *data
 			if (line->symbFlag)
 			{
 				printf("firstLineAlgo 3a - line->ln: %s. \n", line->ln);
-				symbNode=initSymbNode(line->symbValue, dataImg, instructImg, symbTable, symbNode, DATA_TYPE);
+				res= initSymbNode(line->symbValue, dataImg, instructImg, symbTable, DATA_TYPE);
 				printf("firstLineAlgo 3b - line->ln: %s. \n", line->ln);
-				if(symbNode == NULL)
+				if(res == -1)
 				{
 					printf("firstLineAlgo 3c - line->ln: %s. \n", line->ln);
 					line->error = DUP_LABEL_NAME_ERROR;
@@ -272,7 +327,7 @@ void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *data
 		if (line->symbFlag)
 		{
 			printf("firstLineAlgo 4b - line->symbValue: %s. \n", line->symbValue);
-			symbNode = initSymbNode(line->symbValue, dataImg, instructImg, symbTable, symbNode, CODE_TYPE);
+			initSymbNode(line->symbValue, dataImg, instructImg, symbTable, CODE_TYPE);
 			printf("firstLineAlgo 5b - line->ln: %s. \n", line->ln);
 		}
 		getInstrucName(line);
@@ -293,7 +348,6 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 	FILE *fp;
 	char inFileName[FILE_NAME_MAX_LEM];
 	ParsedLineNode *line= NULL;
-	int lineNum = 0;
 	instructImg->ic = 0;
 	line = initPardedLineNode(line);
 
@@ -309,7 +363,6 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 	printf("line->ln: %s. %s\n", (line->ln), "first iteration 2");
 	while (fgets(line->ln, MAX_LINE_LENGTH, fp) != NULL) 
 	{
-		lineNum++;
 		printf("%s\n", "first iteration 3");
 		line->ln = trimwhitespace(line->ln);
 		if(!isEmptyLine(line->ln) & !isCommentLine(line->ln))
@@ -319,13 +372,14 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 			firstLineAlgo(line, instructImg, dataImg, symbTable);
 			printf("%s\n", "first iteration 5");
 
-			addLineToParsedFile(line, parsedFile, lineNum);
+			addLineToParsedFile(line, parsedFile);
+
 			printf("%s\n", "first iteration 6");
 
 		}
 		if (line->error)
 		{	
-			printError(line->error, parsedFile->filename, lineNum);
+			printError(line->error, parsedFile->filename, parsedFile->count);
 		}
 		printf("%s\n", "first iteration 7");
 
@@ -338,31 +392,31 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 	printf("%s\n", "first iteration 8");
 	updateValuesInSymbTable(symbTable, instructImg->ic);
 	printf("%s\n", "first iteration 9");
+	printf("first iteration parsedFile->head: %d\n", parsedFile->head->line.lineType);
 	return NO_ERROR;
 }
 
 void secLineAlgo(ParsedLineNode* line, InstructImg *instructImg, 
 	DataImg *dataImg, SymbTable *symbTable)
 {
-	if(line->lineType == DATA_TYPE | line->lineType == EXTERNAL_TYPE)
+	printf("secLineAlgo error:%d\n", line->error);
+	printf("secLineAlgo- lineType: %d\n", line->lineType);
+	if(line->lineType == DATA_TYPE || line->lineType == EXTERNAL_TYPE)
 	{
 		return;
 	}
 	else if (line->lineType == ENTRY_TYPE)
 	{
-		SymbNode *symbNode = NULL;
-		if((symbNode = getSymbFeature(symbTable, line->typeHandle.et.labelName)) == NULL)
+		printf("secLineAlgo: 2 \n");
+		if(!setSymbEntryType(symbTable, line->typeHandle.et.labelName))
 		{
 			line->error = LABEL_NOT_IN_SYMB_TABLE;
-		}
-		else
-		{
-			symbNode->symbType = ENTRY_TYPE;
-		}
+		}	
 		return;
 	}
 	else 
 	{
+		printf("secLineAlgo: 3 \n");
 		updateBinaryMachineCode(line, instructImg, symbTable);
 	}
 	return;
@@ -371,25 +425,29 @@ void secLineAlgo(ParsedLineNode* line, InstructImg *instructImg,
 int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable,
  char *fileName, ParsedFile *parsedFile)
 {
-	ParsedLineNode *line, *tmp;
-	int lineNum = 0;
-	instructImg->ic = 0;
-
-	if  (((line = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL)
-		| ((tmp = (ParsedLineNode*)malloc(sizeof(ParsedLineNode))) == NULL))
+	lineDFS *row, *tmp;
+	int lineNum = 1;
+	instructImg->ic = FIRST_ADDRES;
+	if  (((row = (lineDFS*)malloc(sizeof(lineDFS))) == NULL)
+		| ((tmp = (lineDFS*)malloc(sizeof(lineDFS))) == NULL))
 	{
 		printMemEllocateError();
-		exit(1);
 	}
-	line = parsedFile->head;
-	while (line != NULL) 
+	printf("secIteration: %d\n", lineNum);
+	row = parsedFile->head;
+	printf("secIteration parsedFile->head: %d\n", parsedFile->head->line.lineType);
+	printf("secIteration 0: %d\n", row->line.lineType);
+	while (lineNum< parsedFile->count) 
 	{
-		secLineAlgo(line, instructImg, dataImg, symbTable);
-		if (line->error)
+		printf("secIteration 1: %d\n", lineNum);
+		secLineAlgo(&row->line, instructImg, dataImg, symbTable);
+		printf("secIteration 2: %s\n", "after secLineAlgo");
+		if (row->line.error)
 		{
-			printError(line->error, parsedFile->filename, ++lineNum);
+			printError(row->line.error, parsedFile->filename, lineNum);
 		}
-		line = line->next;
+		lineNum++;
+		row = row->next;
 	}
 	return NO_ERROR;
 }
@@ -405,7 +463,9 @@ int excute(char* fileName, InstructImg* instructImg,DataImg* dataImg,SymbTable* 
 	}
 	else
 	{
+		printf("excute pf->head: %d\n", pf->head->line.lineType);
 		secIteration(instructImg, dataImg, symbTable, fileName, pf);
 	}
+	printf("finish excute\n");
 	return errorNum; 
 }

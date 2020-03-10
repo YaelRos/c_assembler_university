@@ -18,7 +18,15 @@
 #define STR_LEN 6
 #define DATA_LEN 4
 #define FILE_NAME_MAX_LEM 4
-
+#define OPCODE_LEN_BITS 4
+#define REG_METHOD_LEN_BITS 4
+#define ARE_LEN_BITS 3
+#define IMM_VAL_LEN_BITS 12
+#define REG_VAL_BITS 3
+#define REG_PRIOR_BITS 6
+#define NUM_OF_DATA_GUIDANCE 2
+#define MAX_LINES_IN_FILE 50
+#define BIN_TO_OCT_BITS 3
 
 #define A "100"
 #define R "010"
@@ -64,27 +72,29 @@ typedef struct {
 	int ic;
 } InstructImg;
 
-struct externNode {
+
+
+typedef struct externNode {
 	char SymbName[LABEL_MAX_LEN];
 	int memAddr;
-};
+	struct externNode *next;
+} ExternNode ;
 
 typedef struct {
-	struct externNode *externalLabel;
+	ExternNode *head;
 	int counter;
 } ExternTable;
 
 typedef struct symbNode {
-	char* symbName;
+	char symbName[LABEL_MAX_LEN];
 	int symbAddr;
 	int symbType;
 	struct symbNode *next;
-	struct symbNode *prev;
 } SymbNode;
 
 typedef struct {
 	SymbNode *head;
-	ExternTable exTable;
+	ExternTable *exTable;
 	int counter;
 } SymbTable;
 
@@ -115,6 +125,12 @@ typedef struct
 	int opCodeNum;
 	int instrucGroup;
 } OpCode;
+
+typedef struct 
+{
+	char bin[BIN_TO_OCT_BITS];
+	char oct;
+} ConvertBinToOct;
 
 enum INSTRUCTION_GROUPS 
 {
@@ -164,13 +180,18 @@ typedef struct parsedLine {
 		InstructionStruct instruct;
 		struct EterenEntryType et;
 	} typeHandle;
-	struct parsedLine *next;
-	struct parsedLine *prev;
 } ParsedLineNode;
+
+typedef struct lineDataForSecIter
+{
+	ParsedLineNode line;
+	struct lineDataForSecIter *next;
+} lineDFS; 
+
 
 typedef struct 
 {
-	struct parsedLine* head;
+	lineDFS *head;
 	char * filename;
 	int error;
 	int count;
@@ -209,9 +230,8 @@ void updateValuesInSymbTable(SymbTable *symbTable, int ic);
 
 	@param ParsedLineNode* line - The object of the current line. 
     @param ParsedFile* parsedFile - The object of the current file. 
-    @param int count - number of lines that already read.
 */
-void addLineToParsedFile(ParsedLineNode *line, ParsedFile *parsedFile, int count);
+void addLineToParsedFile(ParsedLineNode *line, ParsedFile *parsedFile);
 
 /*
 	Add a new number to the Data image and increasing the data image counter by 1.
@@ -228,7 +248,7 @@ void addNumToDataImg(char* binaryStr, DataImg *dataImg);
     @param SymbTable* symbTable - The symbol table
     @return SymbNode* - A flag representing if the symbol already exists in our symbol table. NULL = False
 */
-SymbNode* addValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode);
+SymbTable* addValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode);
 
 /*
 	initialize nre symbol node
@@ -236,11 +256,10 @@ SymbNode* addValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode);
 	@param DataImg* dataImg - The data image
     @param InstructImg* instructImg - The instruction image
     @param SymbTable* symbTable - The symbol table
-    @param SymbNode* symbNode - An empty symbol node 
     @param int feature - The feature of the symbol
 */
-SymbNode* initSymbNode(char* name, DataImg *dataImg, 
-	InstructImg *instructImg, SymbTable* symbTable, SymbNode* symbNode, int feature);
+int initSymbNode(char* name, DataImg *dataImg, 
+	InstructImg *instructImg, SymbTable* symbTable, int feature);
 
 /*
 	Check if the symbol table contains the symbol value sy
@@ -251,13 +270,15 @@ SymbNode* initSymbNode(char* name, DataImg *dataImg,
 int symbTableContains(char* sy, SymbTable *symbTable);
 
 /*
-	Set the symbol value in the line object to be 
-	the symbol which defined at the beginning of the line,
-	and move the string pointer forward as the length of the symbol value.
-	@param ParsedLineNode* line - The object of the current line. 
-	@param char* label - The substring of line->ln which start at the end of the label.
+	Set the symbol value to entry type.
+	@param SymbTable* st - The symbol table. 
+	@param char* labelName - The label name of the entry.
 */
-void setSymbValue(ParsedLineNode* line, char* label);
+int setSymbEntryType(SymbTable *st, char* labelName);
+
+
+void updateExTable(int memadd, char* operand, SymbTable *symbTable);
+
 
 #endif
 

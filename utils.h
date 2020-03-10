@@ -8,7 +8,7 @@
 #define OCT_KEYWORD_SIZE 5
 #define DEC_MEM_ADD_SIZE 4
 #define MAX_NUM_WITH_3_DIGIT 999
-
+#define BIN_TO_OCT_THREE 8
 #define OBJ_EXTENSION ".ob" 
 #define EN_EXTENSION ".ent" 
 #define EX_EXTENSION ".ext" 
@@ -32,10 +32,10 @@
 */
 #define isEmptyLine(ln) (*ln == '\0' ? 1: 0) 
 
-void numToMemAdd(char* dstNum, int srcNum, int len);
-int binaryToOctal(char* binaryNumStr);
+char* numToMemAdd(char* dstNum, int srcNum, int len);
+char* binaryToOctal(char* oct,char* binaryNumStr);
 void createEntryExternFiles(SymbTable *symbTable, char *inFileName);
-void createOutputFiles(InstructImg *instructImg, char *inFileName, int dc);
+void createOutputFiles(InstructImg *instructImg, char *inFileName, DataImg* dataImg);
 void freeMem(SymbTable *symbTable, InstructImg* instructImg, DataImg* dataImg, ParsedFile* pf);
 /*
 	Add the file extension to the file name.
@@ -60,8 +60,9 @@ char* trimwhitespace(char *ln);
 	@param int decSrc - The string to convert
 	@param int negative - A flag representing if the number id negative or not. 0 = False, 1 = True. 
 	@param int len - number of BITs in the binary number, each BIT will represented by one char
+	@return char* - the binary number
 */
-void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, int negative, int len);
+char* convertDecStrToBinaryStr(char* binaryDst, char* decSrc, int negative, int len);
 
 /*
 	convert a decimal number which is represented by a string to binary number which 
@@ -71,8 +72,9 @@ void convertDecStrToBinaryStr(char* binaryDst, char* decSrc, int negative, int l
 	@param int num - The string to convert
 	@param int negative - A flag representing if the number id negative or not. 0 = False, 1 = True. 
 	@param int len - number of BITs in the binary number, each BIT will represented by one char
+	@return char* - the binary number
 */
-void convertNumToBinaryStr(char* binary, int num, int negative, int len);
+char* convertNumToBinaryStr(char* binary, int num, int negative, int len);
 
 /* 
     Get the binary character for a number with a given mask.

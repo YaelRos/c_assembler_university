@@ -21,13 +21,16 @@ int main(int argc, char *argv[])
 		initParsedFile(&pf);
 		printf("%s %d\n", argv[i], i);
 		parsingError = excute(argv[i], &instructImg, &dataImg, &symbTable, &pf);
+		printf("Main - Error in The file: %d\n", parsingError);
 
-		if (parsingError)
+		if (!parsingError)
 		{
-			createOutputFiles(&instructImg, argv[i], dataImg.dc);
+			createOutputFiles(&instructImg, argv[i], &dataImg);
+			printf("Main - createOutputFiles:\n");
 			createEntryExternFiles(&symbTable, argv[i]);
+			printf("Main - createEntryExternFiles:\n");
 		}
 		freeMem(&symbTable, &instructImg, &dataImg, &pf);
-		printf("The file: %s\n has compiled successfully", argv[i]);
+		printf("The file: %s has compiled successfully \n", argv[i]);
 	}
 }
