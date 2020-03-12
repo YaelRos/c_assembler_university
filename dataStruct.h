@@ -86,10 +86,10 @@ typedef struct {
 } ExternTable;
 
 typedef struct symbNode {
-	char symbName[LABEL_MAX_LEN];
+	struct symbNode *next;
 	int symbAddr;
 	int symbType;
-	struct symbNode *next;
+	char symbName[LABEL_MAX_LEN];
 } SymbNode;
 
 typedef struct {

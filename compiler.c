@@ -266,8 +266,7 @@ void getOperandsStruct(ParsedLineNode* line, SymbTable *symbTable)
 	}
 }
 
-void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instructImg,
- SymbNode* symbNode, SymbTable* symbTable)
+void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instructImg, SymbTable* symbTable)
 {
 	if (line->symbFlag)
 	{
@@ -281,7 +280,6 @@ void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *data
  SymbTable *symbTable)
 {
 	int res;
-	SymbNode *symbNode = NULL;
 	void (*parseDType[NUM_OF_DATA_GUIDANCE])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
 
 	printf("firstLineAlgo 1 - line->ln: %s. \n", line->ln);
@@ -315,7 +313,7 @@ void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *data
 		}
 		else if (line->lineType == EXTERNAL_TYPE)
 		{
-			handleExternCase(line, dataImg, instructImg, symbNode, symbTable);
+			handleExternCase(line, dataImg, instructImg, symbTable);
 		}
 		return;
 	}

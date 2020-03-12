@@ -313,7 +313,7 @@ void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 	*(line->ln+len-1) = '\0'; //remove after validate it here becuase of the "
 	len= lenOfLine(len);
 	printf("parseStringType - len:%d\n", len);
-	c = *(line->ln);
+	c = *(line->ln);	
 	firstData = dataImg->dc == 0 ? 1:0;
 	while (c)
 	{
@@ -374,7 +374,7 @@ int isGuidanceType(ParsedLineNode* line)
 
 void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 {
-	char* label, tmp[LABEL_MAX_LEN];
+	char* label, tmp[LABEL_MAX_LEN+1]; /* leave extra space for terminating null */
 	int len, i=0;
 	if((label = (char*) malloc (sizeof(char)*LABEL_MAX_LEN)) == NULL)
 	{
@@ -399,6 +399,7 @@ void validateSymb(ParsedLineNode* line, SymbTable * symbTable)
 	}
 	else
 	{
+		line->symbValue = (char*)malloc(len+1);
 		strncpy(line->symbValue, tmp, len+1); /* +1 for including '\0' */
 		printf("validateSymb - line->symbValue:%s\n", line->symbValue);
 

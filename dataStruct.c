@@ -17,15 +17,14 @@ void initParsedFile(ParsedFile *pf)
 	pf->error = 0;
 }
 
-void initSymbTable(SymbTable *symbTable)
-{
+void initSymbTable(SymbTable* symbTable)
+{	
 	symbTable->head = NULL;
 	symbTable->counter = 0;
 
 	symbTable->exTable = (ExternTable*)malloc(sizeof(ExternTable));
 	symbTable->exTable->counter =0;
 	symbTable->exTable->head = NULL;
-
 }
 
 
@@ -40,10 +39,14 @@ ParsedLineNode* initPardedLineNode(ParsedLineNode* line)
 	{
 		printMemEllocateError();
 	}
+	
+	/*
 	if((line->symbValue = (char*)malloc(sizeof(char))) == NULL)
 	{
 		printMemEllocateError();
 	}
+	*/
+
 	line->error = NO_ERROR;
 	printf("%s\n", "Finish to initPardedLineNode");
 	return line;
@@ -56,8 +59,8 @@ SymbNode* getSymbFeature(SymbTable *st, char* labelName)
     printf("getSymbFeature: %s\n", "here");
     /* Initialize the new node */
 	tmp = st->head;
-    printf("getSymbFeature1: %d\n", st->counter);
-    for (i = 0; i<st->counter; i++) /* Handle empty list */
+    // printf("getSymbFeature1: %d\n", st->counter);
+    while (tmp) /* Handle empty list */
     { 
     	printf("getSymbFeature2 - tmp->symbName: %s\n", tmp->symbName);
 	  	printf("getSymbFeature2 - labelName: %s\n", labelName);
@@ -70,12 +73,12 @@ SymbNode* getSymbFeature(SymbTable *st, char* labelName)
 	return NULL;
 }
 
-void updateValuesInSymbTable(SymbTable *symbTable, int ic)
+void updateValuesInSymbTable(SymbTable *st, int ic)
 {
 	SymbNode *tmp;
 	int i;
-	tmp = symbTable->head;
-	for(i =0 ; i< symbTable->counter; i++)
+	tmp = st->head;
+	while(tmp)
 	{
 		printf("updateValuesInSymbTable - tmp: %s\n", tmp->symbName);
 		if (tmp->symbType == DATA_TYPE)
@@ -91,7 +94,7 @@ void updateValuesInSymbTable(SymbTable *symbTable, int ic)
 void addLineToParsedFile(ParsedLineNode *line, ParsedFile *pf)
 {	
 	lineDFS *newNode = (lineDFS*)malloc(sizeof(lineDFS)*MAX_LINES_IN_FILE);
-    lineDFS *tmp;
+    lineDFS *tmp = (lineDFS*)malloc(sizeof(lineDFS)*MAX_LINES_IN_FILE);
 
     /* Initialize the new node */
     newNode->line = *line;
@@ -149,8 +152,16 @@ int initSymbNode(char* name, DataImg *dataImg, InstructImg *instructImg,
 	SymbTable* st, int feature)
 {	
 	SymbNode *newNode = (SymbNode*)malloc(sizeof(SymbNode));
-    SymbNode *tmp;
-    printf("initSymbNode: %s\n", "here");
+    SymbNode *tmp =(SymbNode*)malloc(sizeof(SymbNode));
+
+    if(strlen(name)>LABEL_MAX_LEN)
+    {
+    	printf("strlen(name)>LABEL_MAX_LEN !!!!!!!!!!\n");
+    	// TODO: VERY BAD!
+    }
+
+    printf("+++++ name: %s\n", name);
+
     /* Initialize the new node */
     strcpy(newNode->symbName, name);
     printf("initSymbNode: %s\n", newNode->symbName);
@@ -165,14 +176,18 @@ int initSymbNode(char* name, DataImg *dataImg, InstructImg *instructImg,
 		default: break;
 	}
     newNode->symbType = feature;
-
     newNode->next = NULL;
 
-    if (st->counter == 0) { /* Handle empty list */
+    printf("+-+-+ st->head1: %p | st->head->symbName1: %p\n", st->head, st->head->symbName);
+
+    if (!st->head) { /* Handle empty list */
         st->head = newNode;
         st->counter += 1;
         return 0;
     }
+    printf("+-+-+ st->head2: %p | st->head->symbName2: %p\n", st->head, st->head->symbName);
+
+    // if not empty - place at the end of the list
 
     tmp = st->head;
 
@@ -180,16 +195,20 @@ int initSymbNode(char* name, DataImg *dataImg, InstructImg *instructImg,
     { /* Go to end of list, while looking for a duplicate node */
         if (strcmp(tmp->symbName, name) == 0) 
         {
+        	printf("Something is wrong - duplicated label\n");
+        	exit(1);
             return -1;
         }
-        printf("initSymbNode: %s\n", tmp->symbName);
-        printf("initSymbNode: %d\n", st->counter);
+
+        printf("traveling the list - initSymbNode Name: %s\n", tmp->symbName);
+        printf("traveling the list - initSymbNode Counter: %d\n", st->counter);
         tmp = tmp->next;
     }
+    // printf("traveling the list - initSymbNode Name: %s\n", tmp->symbName);
 
     tmp->next = newNode;
     printf("initSymbNode: %s\n", tmp->symbName);
-    st->counter += 1;  
+    st->counter = st->counter+1;  
 
     return 0;
 }
@@ -217,8 +236,7 @@ int setSymbEntryType(SymbTable *st, char* labelName)
     printf("getSymbFeature: %s\n", "here");
     /* Initialize the new node */
 	tmp = st->head;
-    printf("getSymbFeature1: %d\n", st->counter);
-    for (i = 0; i<st->counter; i++) /* Handle empty list */
+    while (tmp) /* Handle empty list */
     { 
     	printf("getSymbFeature2: %s\n", tmp->symbName);
         if (strcmp(tmp->symbName, labelName) == 0) 
@@ -237,11 +255,15 @@ void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 	SymbNode *tmp;
 
 	ExternNode *exNode = (ExternNode*)malloc(sizeof(ExternNode));
-    ExternNode *tmpNode;
+    ExternNode *tmpNode = (ExternNode*)malloc(sizeof(ExternNode));
+
+	exNode->memAddr = mamadd;
+	exNode->next = NULL;
+	strcpy(exNode->SymbName, operand);
 
 	tmp = symbTable->head;
 	printf("updateExTable - operand: %s\n", operand);
-	for (i = 0; i < symbTable->counter; i++)
+	while (tmp)
 	{
 		if ((tmp->symbType != EXTERNAL_TYPE) || strcmp(operand, tmp->symbName))
 		{
@@ -251,29 +273,26 @@ void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 		{
 			/* if a label came from extern source than add the instruction line address to the exTable */
 			printf("updateExTable - memAddr: %d\n", mamadd);
-			exNode->memAddr = mamadd;
-			exNode->next = NULL;
-			strcpy(exNode->SymbName, operand);
 
-			if (symbTable->exTable->counter == 0)
+			if (symbTable->exTable->counter == 0) /* Handle empty list */
 			{
 				symbTable->exTable->head = exNode;
+				symbTable->exTable->counter += 1;
+				return;
 			}
-			else
-			{
-				tmpNode = symbTable->exTable->head;
 
-			    while (tmpNode->next) 
-			    { /* Go to end of list, while looking for a duplicate node */
-			        tmpNode = tmpNode->next;
-			    }
+			tmpNode = symbTable->exTable->head;
+		    while (tmpNode->next) 
+		    { /* Go to end of list, while looking for a duplicate node */
+		        tmpNode = tmpNode->next;
+		    }
 
-			    tmpNode->next = exNode;
-			}
+		    tmpNode->next = exNode;
+			
 			symbTable->exTable->counter += 1;
 
 			printf("updateExTable - exNode.SymbName: %s\n", exNode->SymbName);
-			return;	
+			return;
 		}
 	}
 }

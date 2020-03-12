@@ -50,11 +50,9 @@ void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *data
 	@param ParsedLineNode * line - The object of the current line. 
 	@param DataImg* dataImg - The data image
     @param InstructImg* instructImg - The instruction image
-    @param SymbNode* symbNode - The symbol node to be added to the symbol table
     @param SymbTable* symbTable - The symbol table
 */
-void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instructImg,
- SymbNode* symbNode, SymbTable* symbTable);
+void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instructImg, SymbTable* symbTable);
 
 /*
    	manage the operands parse that need to do in the CODE type line.
