@@ -178,20 +178,6 @@ char* numToMemAdd(char* dstNum, int srcNum, int len)
 	return dstNum;
 }
 
-/*
- void parsedLineNodeCpy(ParsedLineNode *dst, ParsedLineNode *src)
-{
-	strcpy(dst->fileName,src->fileName);
-	strcpy(dst->line,src->line);
-	dst->error = src->error;
-	dst->symbFlag = src->symbFlag;
-	strcpy(dst->symbValue, src->symbValue);
-	dst->symbType = src->symbType;
-	strcpy(dst->instructName,src->instructName);
-	dst->parseLine *next = NULL;
-}
-*/
-
 
 void appendExtensionToFilename(char* dst, char* src, char* extension)
 {

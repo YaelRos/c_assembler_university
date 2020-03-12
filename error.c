@@ -35,27 +35,56 @@ void printError(int error, char* fileName, int numOfRow)
 			printf("Data declaration can't be empty!\n");break;
 		case ILL_COMMA_ERROR:
 			printf("Detected illegal comma in data declaration - must include numbers separated by a single comma\n");break;
+		case ILL_CHAR_ERROR:
+			printf("Detected illegal char in data declaration - number can include only digits\n");break;
+		case MISS_COMMA_ERROR:
+			printf("Detected illegal char in data declaration - between 2 number must be a comma sign\n");break;
+		case MULTI_CONSEC_COMMAS_ERROR:
+			printf("After a comma we must see a number, and we can't have multiple comma for a number\n");break;		
+		case ILL_POSITIVITY_SIGN_ERROR:
+			printf("Positivity sign appear after comma and proceed by number\n");break;		
+		case EXTRA_TEXT_ERROR:
+			printf("Extra text after closing quotes\n");break;
 		case ILL_DATA_TYPE_ERROR:
 			printf("Data declaration type doesn't exist\n");break;
         case ILLIGALE_LINE_TYPE:
             printf("Detected illegal type of line, no: data or code\n");break;
+        case ILL_REG_NAME:
+            printf("Detected illegal type of register\n");break;
+        case IMM_OPERAND_NOT_A_NUMBER:
+            printf("Immediate opperand is not a valid number\n");break;
+        case STRING_STARTS_QUOTES_IS_MISS:
+            printf("The string of the String type does not start with quotes\n");break;
+        case STRING_QUOTES_IS_MISS:
+            printf("The String of the String type must be wrapped in quotes\n");break;
+        case EMPTY_STRING_ERROR:
+            printf("No String in the String line\n");break;
+        case LABEL_NOT_IN_SYMB_TABLE:
+            printf("The given Label (as operand) is not in the Symbol table\n");break;
+        case NO_OPERANDS_ERROR:
+            printf("There is no opernads in the line\n");break;
+        case MISS_PARAM_ERROR:
+            printf("Missing paramters in the code line\n");break;
+        case EXTRANEOS_TEXT_AFTER_OPERANDS:
+            printf("Extraneous text after second operand\n");break;
+
+
+
+
 	}
 
-	/* MISS_PARAM_ERROR,
+	/* ,
 		INSTRUCTION_DOES_NOT_EXIST_ERROR,
 		UNEXPECTED_RESULT,
-		NO_OPERANDS_ERROR,
-		MISS_COMMA_ERROR,
-		EXTRA_TEXT_ERROR,
-		LABEL_NOT_IN_SYMB_TABLE
+		,
+		,
+		
 
         case INVALID_OPCODE_ERROR:
             printf(BOLD_WHITE_PRINT "Op code '%s' doesn't exist!\n", 
                     pr->rowMetadata.codeRowMetadata.oc.opCodeName);
             break;
-        case DATA_STRING_DECLARATION_MISSING_QUOTES:
-            printf(BOLD_WHITE_PRINT "String data declarations must be wrapped in quotes!\n");
-            break;
+
         case EXTRANEOUS_TEXT_AFTER_STRING_QUOTES:
             printf(BOLD_WHITE_PRINT "Extraneous text after quotes\n");
             break;

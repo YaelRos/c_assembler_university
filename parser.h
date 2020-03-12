@@ -16,6 +16,21 @@ int setStorageEntryOrExtern(ParsedLineNode * line);
 int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTable);
 void setSymbFromExternEntry(ParsedLineNode* line, int etLen);
 
+
+/*Check if the data part in the data line is valid,
+	if is not valid - will update it as an error. */
+void validateDataType(ParsedLineNode* line, char* data);
+
+/*Check if the string part in the string line is valid,
+	if is not valid - will update it as an error. */
+void validateStringType(ParsedLineNode* line, char* string);
+
+/* Check if the operand is immediate if after the # we see valid number */
+int operandIsNumber(char *operand);
+
+/* Check if a given operand is valid register */
+int operandIsRegister(char *operand);
+
 /*
 	Check if there is a symbol definition at the beginning of the line.
 	if there is ':' in the line, it indicates that it's a definition.

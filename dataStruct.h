@@ -27,6 +27,13 @@
 #define NUM_OF_DATA_GUIDANCE 2
 #define MAX_LINES_IN_FILE 50
 #define BIN_TO_OCT_BITS 3
+#define REGISTERS_NUM 8
+
+#define NO_METHOD_BITS "0000"
+#define IMMEDIATE_BITS "0001"
+#define DIRECT_BITS "0010"
+#define INDIRECT_REG_BITS "0100"
+#define DIRECT_REG_BITS "1000"
 
 #define A "100"
 #define R "010"
