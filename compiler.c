@@ -72,7 +72,7 @@ void addRegToMem(char *p, int isNegative, int len, int place, struct instructNod
 {
 	char* dst = NULL;
 	dst = convertDecStrToBinaryStr(dst, p, isNegative, len);;
-	printf("addRegToMem in->instruction:%s\n", in->instruction);
+	strncpy(in->instruction+place, dst, len);
 	strncpy((in->instruction+REG_PRIOR_BITS+(REG_VAL_BITS*2)), A, ARE_LEN_BITS);
 }
 

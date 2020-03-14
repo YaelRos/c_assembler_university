@@ -18,7 +18,7 @@ void printMemEllocateError()
 
 void printError(int error, char* fileName, int numOfRow)
 {
-	printf("%s %s: line-%d\n",ERROR, fileName, numOfRow);
+	printf("%s in file:%s, in line:%d\n",ERROR, fileName, numOfRow);
 	switch (error)
 	{
 		case LABEL_EXCEEDED_MAX_LEN_ERROR:
@@ -67,69 +67,5 @@ void printError(int error, char* fileName, int numOfRow)
             printf("Missing paramters in the code line\n");break;
         case EXTRANEOS_TEXT_AFTER_OPERANDS:
             printf("Extraneous text after second operand\n");break;
-
-
-
-
 	}
-
-	/* ,
-		INSTRUCTION_DOES_NOT_EXIST_ERROR,
-		UNEXPECTED_RESULT,
-		,
-		,
-		
-
-        case INVALID_OPCODE_ERROR:
-            printf(BOLD_WHITE_PRINT "Op code '%s' doesn't exist!\n", 
-                    pr->rowMetadata.codeRowMetadata.oc.opCodeName);
-            break;
-
-        case EXTRANEOUS_TEXT_AFTER_STRING_QUOTES:
-            printf(BOLD_WHITE_PRINT "Extraneous text after quotes\n");
-            break;
-        case ILLEGAL_POSITIVITY_SIGN_IN_DATA_DECLARATION:
-            printf(BOLD_WHITE_PRINT "Illegal sign for number - each number can only have one '+' or '-' sign, followed by a number!\n");
-            break;
-        case ILLEGAL_DATA_DECLARATION_CHARACTER:
-            printf(BOLD_WHITE_PRINT "Illegal character for number - can only contain numeric characters, separated by a comma!\n");
-            break;
-        case ILLEGAL_DATA_DECLARATION_EXTRANEOUS_COMMA:
-            printf(BOLD_WHITE_PRINT "Data declaration can't start or end with a comma! (a comma always has to between numbers)\n");
-            break;
-        case ILLEGAL_DATA_DECLARATION_EXTRANEOUS_SPACE:
-            printf(BOLD_WHITE_PRINT "Extraneous whitespace between numbers!\n");
-            break;    
-        case ILLEGAL_CODE_OPERANDS:
-            printf(BOLD_WHITE_PRINT "Operation code '%s' received illegal arguments!\n", pr->rowMetadata.codeRowMetadata.oc.opCodeName);
-            break;
-        case MISSING_COMMA_BETWEEN_OPERANDS:
-            printf(BOLD_WHITE_PRINT "Operands must be separated between a comma!\n");
-            break;
-        case MULTIPLE_COMMAS_BETWEEN_OPERANDS:
-            printf(BOLD_WHITE_PRINT "Detected more than one comma. Operations can have up to 2 arguments, separated by at most 1 comma\n");
-            break;
-        case NO_TEXT_AFTER_COMMA:
-            printf(BOLD_WHITE_PRINT "Missing text after comma - expecting a second argument\n");
-            break;
-        case EXTRANEOS_TEXT_AFTER_OPERANDS:
-            printf(BOLD_WHITE_PRINT "Extraneous text after second operand\n");
-            break;
-        case EXTRANEOUS_TEXT_AFTER_EXTERN_ENTRY:
-            printf(BOLD_WHITE_PRINT ".entry / .extern declarations can only have a single symbol name\n");
-            break;
-        case DUPLICATE_SYMBOL_DECLARATION:
-            printf(BOLD_WHITE_PRINT "Symbol '%s' already declared - a symbol can only be declared once!\n", pr->symbolName);
-            break;
-        case INVALID_REGISTER_NAME:
-            printf(BOLD_WHITE_PRINT "Invalid register '%s'. Available registers are between @r0 and @r7 \n", pr->rowMetadata.codeRowMetadata.srcOperand);
-            break;
-        case UNKNOWN_ERROR:
-            printf(BOLD_WHITE_PRINT "Encountered an unknown error...\n");
-            break;
-        default:
-            printf(BOLD_WHITE_PRINT "Encountered an unknown error...\n");
-            break;
-    } 
-    */
 }

@@ -12,17 +12,41 @@
 
 extern OpCode opCodesMatch[NUM_OF_INSTRUCTION];
 
+/*
+	In case the line type is Extern/Entry type - set in the appropriate variable of the line object the right type between 
+	these types. 
+	@param ParsedLineNode* line - The object of the current line. 
+	@return int - the number of the type. 
+*/
 int setStorageEntryOrExtern(ParsedLineNode * line);
-int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable *symbTable);
+
+/* 
+	Get the Adressing method of given operand and store it in the appropriate variable of the line object 
+	@param ParsedLineNode* line - The object of the current line. 
+	@param char* operand - the operand value for whim we do the check of the method. 
+	@param SymbTable* symbTable - The symbol table.
+	@return int - The number of the method.
+*/
+int getAddressindMethod(ParsedLineNode* line, char* operand, SymbTable* symbTable);
+
+/* 
+	Set the label that definef in the entry/extern line in the appropriate variable of the line object and 
+	Promote the pointer of the line with etLen steps ahaed 
+	@param ParsedLineNode* line - The object of the current line. 
+	@param int etLen - the length of the label string
+*/
 void setSymbFromExternEntry(ParsedLineNode* line, int etLen);
 
-
-/*Check if the data part in the data line is valid,
-	if is not valid - will update it as an error. */
+/* 
+	Check if the data part in the data line is valid,
+	if is not valid - will update it as an error. 
+*/
 void validateDataType(ParsedLineNode* line, char* data);
 
-/*Check if the string part in the string line is valid,
-	if is not valid - will update it as an error. */
+/* 
+	Check if the string part in the string line is valid,
+	if is not valid - will update it as an error. 
+*/
 void validateStringType(ParsedLineNode* line, char* string);
 
 /* Check if the operand is immediate if after the # we see valid number */

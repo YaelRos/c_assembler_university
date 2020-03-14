@@ -9,8 +9,7 @@
 #define FETCH_FILE "can't fetch file - "
 #define OUT_OF_MEM "out of memory, can't allocate memory"
 
-
-void printMisinFileError();
+void printMisingFileError();
 void printFetchFileError(char* inFileName);
 void printMemEllocateError();
 void printError(int error, char* fileName, int numOfRow);

@@ -83,7 +83,11 @@ void addLineToParsedFile(ParsedLineNode *line, ParsedFile *pf)
     newNode->line = *line;
     newNode->next = NULL;
 
-
+    if(line->error)
+    {
+    	pf->error = line->error;
+    }
+    
     if (pf->count == 0) { /* Handle empty list */
         pf->head = newNode;
         pf->count += 1;
@@ -94,8 +98,6 @@ void addLineToParsedFile(ParsedLineNode *line, ParsedFile *pf)
     while (tmp->next) { /* Go to end of list */
         tmp = tmp->next;
     }
-    printf("addLineToParsedFile - newNode->lineType: %d\n", newNode->line.lineType);
-
     tmp->next = newNode;
     pf->count += 1;  
 }
@@ -173,7 +175,6 @@ int symbTableContains(char* sy, SymbTable *symbTable)
 	tmp = symbTable->head;
 	for (i = 0; i < symbTable->counter; i++, tmp=tmp->next)
 	{
-		printf("symbTableContains - : %s\n", "here2");
 		if ((strcmp(tmp->symbName,sy)) == 0)
 				return 1; 
 	}
@@ -184,12 +185,10 @@ int setSymbEntryType(SymbTable *st, char* labelName)
 {
 	int symbExsit = 0;
     SymbNode *tmp;
-    printf("getSymbFeature: %s\n", "here");
     /* Initialize the new node */
 	tmp = st->head;
     while (tmp) /* Handle empty list */
     { 
-    	printf("getSymbFeature2: %s\n", tmp->symbName);
         if (strcmp(tmp->symbName, labelName) == 0) 
         {
             tmp->symbType = ENTRY_TYPE;
@@ -202,7 +201,6 @@ int setSymbEntryType(SymbTable *st, char* labelName)
 
 void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 {
-	int i;
 	SymbNode *tmp;
 
 	ExternNode *tmpNode, *exNode = (ExternNode*)malloc(sizeof(ExternNode));
@@ -212,7 +210,6 @@ void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 	strcpy(exNode->SymbName, operand);
 
 	tmp = symbTable->head;
-	printf("updateExTable - operand: %s\n", operand);
 	while (tmp)
 	{
 		if ((tmp->symbType != EXTERNAL_TYPE) || strcmp(operand, tmp->symbName))
@@ -222,8 +219,6 @@ void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 		else
 		{
 			/* if a label came from extern source than add the instruction line address to the exTable */
-			printf("updateExTable - memAddr: %d\n", mamadd);
-
 			if (symbTable->exTable->counter == 0) /* Handle empty list */
 			{
 				symbTable->exTable->head = exNode;
@@ -238,10 +233,7 @@ void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 		    }
 
 		    tmpNode->next = exNode;
-			
 			symbTable->exTable->counter += 1;
-
-			printf("updateExTable - exNode.SymbName: %s\n", exNode->SymbName);
 			return;
 		}
 	}

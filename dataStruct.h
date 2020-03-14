@@ -39,13 +39,6 @@
 #define R "010"
 #define E "001"
 
-#define R1 "r1"
-#define R2 "r2"
-#define R3 "r3"
-#define R4 "r4"
-#define R5 "r5"
-#define R6 "r6"
-#define R7 "r7"
 #define ENTRY "entry"
 #define EXTERN "extern"
 #define DATA "data"
@@ -204,14 +197,19 @@ typedef struct
 	int count;
 } ParsedFile; 
 
+/* Initiate Data Image */
 void initDataImg(DataImg* dataImg);
 
+/* Initiate the Parsed File Object */
 void initParsedFile(ParsedFile *pf);
 
+/* Initiate the Symbol Table for specific File */
 void initSymbTable(SymbTable *symbTable);
 
+/* Initiate a table that contains the operand that using an extrenal label in order to create the .ext file */
 ExternTable* initExTable(ExternTable *exTable);
 
+/* Initate the object of specific line in the file */
 ParsedLineNode* initPardedLineNode(ParsedLineNode* line);
 
 /*
@@ -264,6 +262,8 @@ SymbTable* addValuesInSymbTable(SymbTable *symbTable, SymbNode *symbNode);
     @param InstructImg* instructImg - The instruction image
     @param SymbTable* symbTable - The symbol table
     @param int feature - The feature of the symbol
+    @return int - If the initiate action with done with no error. 0 = False, 1 = True
+
 */
 int initSymbNode(char* name, DataImg *dataImg, 
 	InstructImg *instructImg, SymbTable* symbTable, int feature);
@@ -280,11 +280,18 @@ int symbTableContains(char* sy, SymbTable *symbTable);
 	Set the symbol value to entry type.
 	@param SymbTable* st - The symbol table. 
 	@param char* labelName - The label name of the entry.
+	@return int - A flag representing if the symbol value that asked to be update exist. 0 = False, 1 = True
 */
 int setSymbEntryType(SymbTable *st, char* labelName);
 
-
-void updateExTable(int memadd, char* operand, SymbTable *symbTable);
+/*
+	For each operand that use an extrenal label update the extTable with the operand value
+	and the the address of the opernad.
+	@param int memadd - the address line of the operand. 
+	@param char* operand - The label name of the opernad.
+	@param SymbTable* symbTable - The symbol table.
+*/
+void updateExTable(int memadd, char* operand, SymbTable* symbTable);
 
 
 #endif

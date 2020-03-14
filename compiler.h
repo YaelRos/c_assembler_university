@@ -1,10 +1,7 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
-/*#include "dataStruct.h"
-#include "error.h"*/
 #include "parser.h"
-
 
 /*
     Run the first and second iteration, and return an indication whether we failed or succeeded

@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 
 	if (argc == 1) /* check for file input */
 	{
-		printMisinFileError();
+		printMisingFileError();
 		return 1;
 	}
 	for (i = 1; i < argc; i++)
@@ -26,6 +26,10 @@ int main(int argc, char *argv[])
 		{
 			createOutputFiles(&instructImg, argv[i], &dataImg);
 			createEntryExternFiles(&symbTable, argv[i]);
+		}
+		else
+		{
+			printf("Can not compile the file: %s\n", argv[i]);
 		}
 		freeMem(&symbTable, &instructImg, &dataImg, &pf);
 		printf("The file: %s has compiled successfully \n", argv[i]);

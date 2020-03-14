@@ -32,10 +32,45 @@
 */
 #define isEmptyLine(ln) (*ln == '\0' ? 1: 0) 
 
+/*
+	Convert number (represented as a string) with 3 digitis to number (represented as a string) of 4
+	digits with leading 0.
+	@param char* dstNum - The string that representing the 4-digit number
+	@param int srcNum - The string that representing the 3-digit or 4-digit number.
+	@param int len - the len of the srcNum string.
+*/
 char* numToMemAdd(char* dstNum, int srcNum, int len);
+
+/*
+	convert a binary string to Octal string
+	@param char* oct - the octal number 
+	@param char* binaryNumStr - the binary number to be converted
+	@return char* - the octal number after being converted from binary number.
+*/
 char* binaryToOctal(char* oct,char* binaryNumStr);
-void createEntryExternFiles(SymbTable *symbTable, char *inFileName);
-void createOutputFiles(InstructImg *instructImg, char *inFileName, DataImg* dataImg);
+
+/*
+	Create 2 files: 1. file that represent all the opernads that use an entry label,
+	each line in the file includes the label name and the address where the label was defined.
+	2. file that represent all the oprands that use extern label, 
+	each line in the file includes the label name and the address of the opernad.
+	@param SymbTable* symbTable
+	@param char* inFileName - the file name excluding the suffix. 
+*/
+void createEntryExternFiles(SymbTable* symbTable, char* inFileName);
+
+/*
+	Create file that display for each address what it is the octal mechine code of it,
+	the first line display the number of instrcution counter and the number of data counter
+	@param InstructImg* instructImg
+	@param char* inFileName
+	@param DataImg* dataImg 
+*/
+void createOutputFiles(InstructImg* instructImg, char* inFileName, DataImg* dataImg);
+
+/*
+	Free the dynamic memory that allocate 
+*/
 void freeMem(SymbTable *symbTable, InstructImg* instructImg, DataImg* dataImg, ParsedFile* pf);
 /*
 	Add the file extension to the file name.
