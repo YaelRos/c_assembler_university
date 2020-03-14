@@ -7,8 +7,8 @@ void initDataImg(DataImg* dataImg)
 	{
 		printMemEllocateError();
 	}
-	dataImg->head = NULL;
 	dataImg->dc = 0;
+	dataImg->head = NULL;
 }
 
 void initParsedFile(ParsedFile *pf)
@@ -49,12 +49,10 @@ SymbNode* getSymbFeature(SymbTable *st, char* labelName)
     SymbNode *tmp;
    
 	tmp = st->head;
-    while (tmp) /* Handle empty list */
+    while (tmp)
     { 
         if (strcmp(tmp->symbName, labelName) == 0) 
-        {
             return tmp;
-        }
         tmp = tmp->next;
 	}
 	return NULL;
@@ -68,9 +66,7 @@ void updateValuesInSymbTable(SymbTable *st, int ic)
 	while(tmp)
 	{
 		if (tmp->symbType == DATA_TYPE)
-		{
 			tmp->symbAddr = tmp->symbAddr+ic+FIRST_ADDRES;
-		}
 		tmp = tmp->next;
 	}
 }
@@ -83,22 +79,20 @@ void addLineToParsedFile(ParsedLineNode *line, ParsedFile *pf)
     newNode->line = *line;
     newNode->next = NULL;
 
-    if(line->error)
-    {
+    if(line->error) /* if there is an error in the file save it so will not create output files*/
     	pf->error = line->error;
-    }
-    
-    if (pf->count == 0) { /* Handle empty list */
+
+    if (pf->count == 0) /* Handle empty list */
+    { 
         pf->head = newNode;
         pf->count += 1;
         return;
     }
 
     tmp = pf->head;
-    while (tmp->next) { /* Go to end of list */
+    while (tmp->next) /* Go to end of list */
         tmp = tmp->next;
-    }
-    tmp->next = newNode;
+    tmp->next = newNode; /* store the new line node in the end of the linked list */
     pf->count += 1;  
 }
 
@@ -110,7 +104,7 @@ void addNumToDataImg(char* binaryStr, DataImg *dataImg)
 	strncpy(new->binaryData, binaryStr, MAX_WORD_LENGTH+1);
 	new->next = NULL;
 
-	if (dataImg->dc == 0)
+	if (dataImg->dc == 0) /* Handle empty list */
 	{
 		dataImg->head = new;
 		dataImg->dc++;
@@ -118,10 +112,9 @@ void addNumToDataImg(char* binaryStr, DataImg *dataImg)
 	}
 
 	tmp = dataImg->head;
-	while (tmp->next)
+	while (tmp->next) /* Go to end of list */
 		tmp = tmp->next;
-	tmp->next = new;
-
+	tmp->next = new; /* store the new data image node in the end of the linked list */
 	dataImg->dc++;
 }
 	
@@ -133,7 +126,7 @@ int initSymbNode(char* name, DataImg *dataImg, InstructImg *instructImg,
 
     /* Initialize the new node */
     strcpy(newNode->symbName, name);
-    switch (feature)
+    switch (feature) /* Save the address of the symbol by the line type */
 	{
 		case DATA_TYPE: newNode->symbAddr = dataImg->dc; break;
 		case CODE_TYPE: newNode->symbAddr = instructImg->ic + FIRST_ADDRES;  break;
@@ -151,13 +144,10 @@ int initSymbNode(char* name, DataImg *dataImg, InstructImg *instructImg,
     }
 
     tmp = st->head;
-
     while (tmp->next) 
     { /* Go to end of list, while looking for a duplicate node */
         if (strcmp(tmp->symbName, name) == 0) 
-        {
             return 0;
-        }
         tmp = tmp->next;
     }
 
@@ -187,7 +177,7 @@ int setSymbEntryType(SymbTable *st, char* labelName)
     SymbNode *tmp;
     /* Initialize the new node */
 	tmp = st->head;
-    while (tmp) /* Handle empty list */
+    while (tmp)
     { 
         if (strcmp(tmp->symbName, labelName) == 0) 
         {
@@ -202,9 +192,9 @@ int setSymbEntryType(SymbTable *st, char* labelName)
 void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 {
 	SymbNode *tmp;
-
 	ExternNode *tmpNode, *exNode = (ExternNode*)malloc(sizeof(ExternNode));
 
+	/* initate new exNode */
 	exNode->memAddr = mamadd;
 	exNode->next = NULL;
 	strcpy(exNode->SymbName, operand);
@@ -227,11 +217,8 @@ void updateExTable(int mamadd, char* operand, SymbTable *symbTable)
 			}
 
 			tmpNode = symbTable->exTable->head;
-		    while (tmpNode->next) 
-		    { /* Go to end of list, while looking for a duplicate node */
+		    while (tmpNode->next) /* Go to end of list */
 		        tmpNode = tmpNode->next;
-		    }
-
 		    tmpNode->next = exNode;
 			symbTable->exTable->counter += 1;
 			return;

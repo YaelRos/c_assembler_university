@@ -65,6 +65,31 @@ int operandIsNumber(char *operand)
 }
 
 
+void validateCodeOperands(ParsedLineNode* line) 
+{
+    int isValid = 0, opCodeNum = line->typeHandle.instruct.opCode;
+
+    if (opCodeNum == MOV || opCodeNum == ADD || opCodeNum == SUB) 
+        isValid = ((line->typeHandle.instruct.opDstMethod == DIRECT) || (line->typeHandle.instruct.opDstMethod == INDIRECT_REG) || (line->typeHandle.instruct.opDstMethod == DIRECT_REG));
+    else if (opCodeNum == CMP) 
+        isValid = 1;
+    else if (opCodeNum == LEA) 
+        isValid = (line->typeHandle.instruct.opSrcMethod == DIRECT) &&
+    		((line->typeHandle.instruct.opDstMethod == DIRECT) || (line->typeHandle.instruct.opDstMethod == INDIRECT_REG) || (line->typeHandle.instruct.opDstMethod == DIRECT_REG));
+    else if (opCodeNum == CLR || opCodeNum == NOT || opCodeNum == INC || opCodeNum == DEC || opCodeNum == RED ) 
+        isValid = (line->typeHandle.instruct.opSrcMethod == NO_ADD_METHOD) &&
+    		((line->typeHandle.instruct.opDstMethod == DIRECT) || (line->typeHandle.instruct.opDstMethod == INDIRECT_REG) || (line->typeHandle.instruct.opDstMethod == DIRECT_REG));
+    else if (opCodeNum == JMP || opCodeNum == BNE || opCodeNum == JSR)
+    	isValid = (line->typeHandle.instruct.opSrcMethod == NO_ADD_METHOD) &&
+    		((line->typeHandle.instruct.opDstMethod == DIRECT) || (line->typeHandle.instruct.opDstMethod == INDIRECT_REG));
+    else if (opCodeNum == PRN) 
+    	isValid = (line->typeHandle.instruct.opSrcMethod == NO_ADD_METHOD);    
+    else 
+        isValid = (line->typeHandle.instruct.opSrcMethod == NO_ADD_METHOD) && (line->typeHandle.instruct.opDstMethod == NO_ADD_METHOD);
+    if (!isValid) 
+        line->error = ILL_CODE_OPERANDS_ERROR;
+}
+
 void setSymbFromExternEntry(ParsedLineNode* line, int etLen)
 {
 	line->ln = line->ln + etLen;
@@ -169,33 +194,33 @@ void validateStringType(ParsedLineNode* line, char* string)
 void validateDataType(ParsedLineNode* line, char* data)
 {
     int commaFlag = 0, positivitySignFlag = 0;	
-    char* tmp;
 
-    tmp = data;
-    tmp=trimwhitespace(tmp);
-    if (*tmp == '\0') 
+    data=trimwhitespace(data);
+    if (*data == '\0') 
     {
         line->error = EMPTY_DATA_ERROR;
         return;
     } 
-    else if (*tmp == ',') 
+    else if (*data == ',') 
     {
         line->error = ILL_COMMA_ERROR;
         return;
     }
-    else if (!isdigit(*tmp) && !(*tmp == '-'  || *tmp == '+' )) 
+    else if (!isdigit(*data) && !(*data == '-'  || *data == '+' )) 
     {
         line->error = ILL_CHAR_ERROR;
         return;
     }
+    else if ((*data == '-'  || *data == '+' ))
+    	positivitySignFlag = 1;
 
-    tmp++;
+    data++;
 
-    while (*tmp != '\0' && *tmp != '\n') 
+    while (*data != '\0' && *data != '\n') 
     {
-        if (*tmp == ',') 
+        if (*data == ',') 
         {
-            if (commaFlag || (!isspace(*(tmp-1)) && !isdigit(*(tmp-1)))) /* Check if consecutive commas, or if neighbours aren't a digit or a space*/
+            if (commaFlag || (!isspace(*(data-1)) && !isdigit(*(data-1)))) /* Check if consecutive commas, or if neighbours aren't a digit or a space*/
             { 
                 line->error = MULTI_CONSEC_COMMAS_ERROR;
                 return;
@@ -203,22 +228,22 @@ void validateDataType(ParsedLineNode* line, char* data)
             commaFlag = 1;
             positivitySignFlag = 0;
         } 
-        else if ((*tmp == '-'  || *tmp == '+' )) 
+        else if ((*data == '-'  || *data == '+' )) 
         {
-            if (isdigit(*(tmp-1)) || !isdigit(*(tmp+1)) || positivitySignFlag) /* After a sign we must see a number, and we can't have multiple signs for a number*/
+            if (isdigit(*(data-1)) || !isdigit(*(data+1)) || positivitySignFlag) /* After a sign we must see a number, and we can't have multiple signs for a number*/
             { 
                 line->error = ILL_POSITIVITY_SIGN_ERROR;
                 return;
             }
             positivitySignFlag = 1;
         } 
-        else if (isdigit(*tmp)) 
+        else if (isdigit(*data)) 
         {
             commaFlag = 0;
         } 
-        else if (isspace(*tmp)) 
+        else if (isspace(*data)) 
         {
-            if (isdigit(*(tmp-1)) && isdigit(*(tmp+1))) 
+            if (isdigit(*(data-1)) && isdigit(*(data+1))) 
             {
                 line->error = MISS_COMMA_ERROR;
                 return;
@@ -229,10 +254,10 @@ void validateDataType(ParsedLineNode* line, char* data)
             line->error = ILL_CHAR_ERROR;
             return;
         }
-        tmp++;
+        data++;
     }
 
-    if (commaFlag || *tmp == ',') 
+    if (commaFlag || *data == ',') 
     {
         line->error = ILL_CHAR_ERROR;
         return;
@@ -324,6 +349,7 @@ void getInstrucName(ParsedLineNode* line)
 	if (i == NUM_OF_INSTRUCTION)
 	{
 		line->error= INSTRUCTION_DOES_NOT_EXIST_ERROR;
+		return; 
 	}
 	else
 	{
@@ -339,6 +365,8 @@ void parseDataType(ParsedLineNode* line, DataImg *dataImg)
 	
 	dec = line->ln;
 	validateDataType(line, line->ln); 
+	if (line->error)
+		return;
 	strtok(dec, comma);
 	while (dec)
 	{
@@ -363,6 +391,8 @@ void parseStringType(ParsedLineNode* line, DataImg *dataImg)
 
 	line->ln = trimwhitespace(line->ln);
 	validateStringType(line, line->ln);
+	if (line->error)
+		return;
 	line->ln++; /* remove " from the start of the thering */
 	len = strlen(line->ln);
 	len= lenOfLine(len);

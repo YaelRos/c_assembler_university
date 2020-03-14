@@ -13,7 +13,7 @@
 #define EN_EXTENSION ".ent" 
 #define EX_EXTENSION ".ext" 
 #define ASSEMBLY_EXTENSION ".as" 
-
+#define DEC 10
 #define NUM_OF_SAVED_WORD 27
 
 #define isNegative(num) (*num == '-' ? 1: 0)

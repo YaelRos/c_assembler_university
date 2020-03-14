@@ -30,10 +30,10 @@ void createOutputFiles(InstructImg *instructImg, char *inFileName, DataImg* data
 
 	appendExtensionToFilename(outFileName, inFileName, OBJ_EXTENSION);
 	fp = fopen(outFileName, "w");
-	fprintf(fp, "%d %d\n", instructImg->ic-100, dataImg->dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
+	fprintf(fp, "%d %d\n", instructImg->ic-FIRST_ADDRES, dataImg->dc); /* Subtract DC from IC, which was added previously in the 2nd iteration */
 
 	/* Write every row in Octal */
-	for (i = 0; i < instructImg->ic -100; i++) 
+	for (i = 0; i < instructImg->ic -FIRST_ADDRES; i++) 
 	{
 		keywordInOct = binaryToOctal(keywordInOct, instructImg->instructions[i].instruction);
 		memAdd = numToMemAdd(memAdd, FIRST_ADDRES+i, DEC_MEM_ADD_SIZE+1);
@@ -99,12 +99,21 @@ void createEntryExternFiles(SymbTable *symbTable, char *inFileName)
 		fclose(fpEx);
 }
 
-void freeMem(SymbTable *symbTable, InstructImg* instructImg, 
+void freeMem(SymbTable* symbTable, InstructImg* instructImg, 
 	DataImg* dataImg, ParsedFile* pf) 
 {
-	SymbNode *symbNode;
-	DataImgNode *dataNode;
-	lineDFS *pLine;
+	SymbNode* symbNode;
+	DataImgNode* dataNode;
+	lineDFS* pLine;
+	ExternNode* exNode;
+
+	while (symbTable->exTable->head != NULL) 
+	{
+		exNode = symbTable->exTable->head;
+		symbTable->exTable->head = symbTable->exTable->head->next;
+		free(exNode);
+	}
+
 	while (symbTable->head != NULL) 
 	{
 		symbNode = symbTable->head;
@@ -123,7 +132,6 @@ void freeMem(SymbTable *symbTable, InstructImg* instructImg,
 		pf->head = pf->head->next;
 		free(pLine);
 	}
-
 }
 
 char* binaryToOctal(char* octal, char* binaryNumStr)
@@ -251,8 +259,8 @@ void itoa(int n, char s[])
 		n = -n;
 	i=0;
 	do {	/* generate digits in reverse order */
-		s[i++] = n % 10 + '0'; /* get next digit */
-	} while ((n /= 10) > 0);	/* delete it */
+		s[i++] = n % DEC + '0'; /* get next digit */
+	} while ((n /= DEC) > 0);	/* delete it */
 	if (sign < 0)
 		s[i++] = '-';
 	s[i] = '\0';

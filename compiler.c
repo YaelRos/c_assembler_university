@@ -8,17 +8,12 @@ void addDirectLabelToMem(ParsedLineNode* line, char* symbVal, InstructImg *instr
 	char *dst = NULL; 
 
 	if ((in = (struct instructNode*) malloc(sizeof(struct instructNode))) ==NULL)
-	{
 		printMemEllocateError();
-	} 
 
 	if((symbNode = getSymbFeature(symbTable, symbVal)) == NULL) /* find the symbol definition */
-	{
 		line->error = LABEL_NOT_IN_SYMB_TABLE;
-	}
-	else
+	else /* add the converted (to binary) label address to the instruction row */
 	{
-		/* add the converted (to binary) label address to the instruction row */
 		dst = convertNumToBinaryStr(dst, symbNode->symbAddr, 0, IMM_VAL_LEN_BITS);
 		strncpy(in->instruction, dst, IMM_VAL_LEN_BITS);
 	}
@@ -31,9 +26,10 @@ void addDirectLabelToMem(ParsedLineNode* line, char* symbVal, InstructImg *instr
 	}
 	else
 	{
-		memcpy(in->instruction+IMM_VAL_LEN_BITS, R, ARE_LEN_BITS);
+		strncpy(in->instruction+IMM_VAL_LEN_BITS, R, ARE_LEN_BITS);
 		strcpy(instructImg->instructions[instructImg->ic-100].instruction, in->instruction); /* addBinaryCodeToInstructImg */
 	}
+	free(in);
 }
 
 void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg, 
@@ -43,20 +39,20 @@ void updateBinaryMachineCode(ParsedLineNode* line, InstructImg *instructImg,
 	{ /* not a direct addressing method though no need to change instructions */
 		instructImg->ic = instructImg->ic + line->typeHandle.instruct.addLine;
 	}
-	else if (line->typeHandle.instruct.opSrcMethod != DIRECT)
+	else if (line->typeHandle.instruct.opSrcMethod != DIRECT) /* if only the dst operand is in direct method then update only the last additional line of the binary code */
 	{
 		instructImg->ic+= line->typeHandle.instruct.addLine;
 		addDirectLabelToMem(line, line->typeHandle.instruct.opDst, instructImg, symbTable);
 		updateExTable(instructImg->ic, line->typeHandle.instruct.opDst, symbTable);
 	}
-	else if (line->typeHandle.instruct.opDstMethod != DIRECT)
+	else if (line->typeHandle.instruct.opDstMethod != DIRECT) /* if only the src operand is in direct method then update only the first additional line of the binary code */
 	{
 		instructImg->ic++;
 		addDirectLabelToMem(line, line->typeHandle.instruct.opSrc, instructImg, symbTable);
 		updateExTable(instructImg->ic, line->typeHandle.instruct.opSrc, symbTable);
 		instructImg->ic++;
 	}
-	else 
+	else /* if both src&dat operands are in direct method then update the 2 additional lines of the binary code */
 	{
 		instructImg->ic++;
 		addDirectLabelToMem(line, line->typeHandle.instruct.opSrc, instructImg, symbTable);
@@ -127,6 +123,8 @@ void buildBinaryCodeNextLn(ParsedLineNode *line, InstructImg* instructImg)
 			break;
 		case NO_ADDITIONAL_LINE: break;
 	}
+	free(in1);
+	free(in2);
 
 }
 
@@ -149,9 +147,7 @@ void buildBinaryCodeFirstLn(ParsedLineNode* line, InstructImg* instructImg)
 	struct instructNode* in;
 	char* binary = NULL;
 	if ((in = (struct instructNode*) malloc(sizeof(struct instructNode))) ==NULL)
-	{
 		printMemEllocateError();
-	}
 
 	binary = convertNumToBinaryStr(binary, line->typeHandle.instruct.opCode, 0, OPCODE_LEN_BITS);
 	strncpy(in->instruction, binary, OPCODE_LEN_BITS); /* add opcode */
@@ -165,6 +161,7 @@ void buildBinaryCodeFirstLn(ParsedLineNode* line, InstructImg* instructImg)
 
 	instructImg->ic++;
 	buildBinaryCodeNextLn(line, instructImg);
+	free(in);
 }
 
 void calculateL(ParsedLineNode* line)
@@ -222,36 +219,27 @@ void handleExternCase(ParsedLineNode* line,DataImg* dataImg,InstructImg* instruc
 void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *dataImg,
  SymbTable *symbTable)
 {
-	SymbNode * tmp;
 	void (*parseDType[NUM_OF_DATA_GUIDANCE])(ParsedLineNode*, DataImg*) = {parseDataType, parseStringType};
 
 	if((line->symbFlag = isFirstFieldSymb(line->ln)) == 1) 
 	{
 		validateSymb(line, symbTable);
-	} 
-	tmp = symbTable->head;
-	while (tmp) 
-	{ /* Go to end of list, while looking for a duplicate node */
-    	tmp = tmp->next;
-    }
+		if (line->error)
+			return;
+	}
+	
 	/*DATA part: */
 	if(isGuidanceType(line))
 	{
 		if (line->lineType == DATA_TYPE)
 		{
 			if (line->symbFlag)
-			{
 				if(!initSymbNode(line->symbValue, dataImg, instructImg, symbTable, DATA_TYPE))
-				{
 					line->error = DUP_LABEL_NAME_ERROR;
-				}
-			}
 			parseDType[line->typeHandle.dataType](line, dataImg);
 		}
 		else if (line->lineType == EXTERNAL_TYPE)
-		{
 			handleExternCase(line, dataImg, instructImg, symbTable);
-		}
 		return;
 	}
 
@@ -264,7 +252,14 @@ void firstLineAlgo(ParsedLineNode* line, InstructImg *instructImg, DataImg *data
 				line->error = DUP_LABEL_NAME_ERROR;
 		}
 		getInstrucName(line);
+		if (line->error != NO_ERROR)
+			return;
 		getOperandsStruct(line, symbTable);
+		if (line->error != NO_ERROR)
+			return;
+		validateCodeOperands(line);
+		if (line->error != NO_ERROR)
+			return;
 		calculateL(line);
 		buildBinaryCodeFirstLn(line, instructImg);
 	}	
@@ -276,11 +271,11 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 {
 	FILE *fp;
 	char inFileName[FILE_NAME_MAX_LEM];
-	SymbNode* tmp;
 	ParsedLineNode *line= NULL;
 	instructImg->ic = 0;
 	line = initPardedLineNode(line);
-	
+	dataImg->dc = 0;
+
 	appendExtensionToFilename(inFileName, fileName, ASSEMBLY_EXTENSION);
 
 	if ((fp = fopen(inFileName, "r")) == NULL)
@@ -288,52 +283,23 @@ int firstIteration(char *fileName, InstructImg *instructImg, DataImg *dataImg,
 		printFetchFileError(inFileName);
 		return 1;
 	}
-	
+
 	while (fgets(line->ln, MAX_LINE_LENGTH, fp) != NULL) 
 	{
-		tmp = symbTable->head;
-		while (tmp) 
-		{ /* Go to end of list, while looking for a duplicate node */
-        	tmp = tmp->next;
-        }
 		line->ln = trimwhitespace(line->ln);
 		if(!isEmptyLine(line->ln) & !isCommentLine(line->ln))
 		{
-			tmp = symbTable->head;
-    		while (tmp) 
-    		{ /* Go to end of list, while looking for a duplicate node */
-	        	tmp = tmp->next;
-	        }
 			firstLineAlgo(line, instructImg, dataImg, symbTable);
-			tmp = symbTable->head;
-    		while (tmp) 
-    		{ /* Go to end of list, while looking for a duplicate node */
-	        	tmp = tmp->next;
-	        }
 			addLineToParsedFile(line, parsedFile);
-			tmp = symbTable->head;
-			while (tmp) 
-			{ /* Go to end of list, while looking for a duplicate node */
-	        	tmp = tmp->next;
-	        }
 		}
 		if (line->error)
-		{	
 			printError(line->error, parsedFile->filename, parsedFile->count);
-		}
-		tmp = symbTable->head;
-		while (tmp) 
-		{ /* Go to end of list, while looking for a duplicate node */
-        	tmp = tmp->next;
-        }
 		line = initPardedLineNode(line);
-
 	}
+
 	fclose(fp);
 	if(parsedFile->error)
-	{
 		return parsedFile->error;
-	}
 	updateValuesInSymbTable(symbTable, instructImg->ic);
 	return NO_ERROR;
 }
@@ -342,22 +308,15 @@ void secLineAlgo(ParsedLineNode* line, InstructImg *instructImg,
 	DataImg *dataImg, SymbTable *symbTable)
 {
 	if(line->lineType == DATA_TYPE || line->lineType == EXTERNAL_TYPE)
-	{
 		return;
-	}
 	else if (line->lineType == ENTRY_TYPE)
 	{
 		if(!setSymbEntryType(symbTable, line->typeHandle.et.labelName))
-		{
 			line->error = LABEL_NOT_IN_SYMB_TABLE;
-		}	
 		return;
 	}
 	else 
-	{
 		updateBinaryMachineCode(line, instructImg, symbTable);
-	}
-	return;
 }
 
 int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTable,
@@ -366,18 +325,12 @@ int secIteration(InstructImg *instructImg, DataImg *dataImg, SymbTable *symbTabl
 	lineDFS *row;
 	int lineNum = 1;
 	instructImg->ic = FIRST_ADDRES;
-	if ((row = (lineDFS*)malloc(sizeof(lineDFS))) == NULL)
-	{
-		printMemEllocateError();
-	}
 	row = parsedFile->head;
 	while (lineNum< parsedFile->count) 
 	{
 		secLineAlgo(&row->line, instructImg, dataImg, symbTable);
 		if (row->line.error)
-		{
 			printError(row->line.error, parsedFile->filename, lineNum);
-		}
 		lineNum++;
 		row = row->next;
 	}
@@ -390,9 +343,7 @@ int excute(char* fileName, InstructImg* instructImg,DataImg* dataImg,SymbTable* 
 	pf->filename = fileName;
 	errorNum = firstIteration(fileName, instructImg, dataImg, symbTable, pf);
 	if (errorNum)
-	{
 		return errorNum; 
-	}
 	else
 	{
 		secIteration(instructImg, dataImg, symbTable, fileName, pf);

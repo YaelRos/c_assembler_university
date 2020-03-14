@@ -2,7 +2,7 @@
 #define ERROR_H
 #include <stdlib.h>
 #include <stdio.h>
-#define ERROR "ERROR: "
+#define ERROR "ERROR"
 #define LABEL_BEFORE_EXTERN "There's a label at the beginning of the extern line"
 
 #define MISSING_FILE_PARAMETER "missing file parameter"
@@ -44,7 +44,8 @@ enum ERRORS
 	STRING_STARTS_QUOTES_IS_MISS,
 	STRING_QUOTES_IS_MISS,
 	EMPTY_STRING_ERROR,
-	EXTRANEOS_TEXT_AFTER_OPERANDS
+	EXTRANEOS_TEXT_AFTER_OPERANDS,
+	ILL_CODE_OPERANDS_ERROR
 };
 
 #endif

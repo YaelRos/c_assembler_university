@@ -55,6 +55,9 @@ int operandIsNumber(char *operand);
 /* Check if a given operand is valid register */
 int operandIsRegister(char *operand);
 
+/* Check if the addressing method with a given instruction is legal */
+void validateCodeOperands(ParsedLineNode* line);
+
 /*
 	Check if there is a symbol definition at the beginning of the line.
 	if there is ':' in the line, it indicates that it's a definition.
